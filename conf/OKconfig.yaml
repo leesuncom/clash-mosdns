@@ -1,0 +1,617 @@
+port: 7890
+socks-port: 7891
+mode: rule
+log-level: debug  # 调试完成后改为error/warn
+external-controller: '0.0.0.0:9090'
+external-ui: /usr/local/etc/clash/ui
+secret: 123456
+tun:
+  enable: true
+  stack: system
+  device: tun_3000
+  mtu: 1500  # 修正为OPNsense适配的1500
+  auto-route: true
+  strict-route: true
+  auto-detect-interface: true
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+dns:
+  enable: true
+  listen: 0.0.0.0:53
+  default-nameserver: 
+    - 127.0.0.1:5335  #指向mosdns监听地址
+sniffer:
+  enable: true
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: true
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443, 8443]
+  skip-domain:
+    - "+.push.apple.com"
+
+proxies:
+    - alterId: 0  # 移除多余引号，规范格式
+      cipher: auto
+      name: "\U0001F1E9\U0001F1EADE_1|2.3MB/s"
+      network: ws
+      port: 8080  # 移除多余引号
+      server: tgju.org
+      skip-cert-verify: false
+      tls: false
+      type: vmess
+      udp: true
+      uuid: nasnet
+      ws-opts:
+        early-data-header-name: Sec-WebSocket-Protocol
+        headers:
+            Host: nasnet-571296497.iranpress.co
+        max-early-data: 2560
+        path: /nasnet/cdn
+      xudp: true
+    - alpn:
+        - h2
+        - http/1.1
+      client-fingerprint: chrome
+      encryption: none
+      name: "\U0001F1E9\U0001F1EADE_2|1.6MB/s"
+      network: ws
+      port: 2053  # 移除多余引号
+      server: 104.24.196.20
+      servername: kh2tiyozkxybazdibomyhih.mahdi383ir.website
+      tls: true
+      type: vless
+      udp: true
+      uuid: c3ffa4ee-fbbe-45e3-f737-db2f381f557e
+      ws-opts:
+        headers:
+            Host: kh2tiyozkxybazdibomyhih.mahdi383ir.website
+            User-Agent: Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.101 Safari/537.36
+        path: /
+      xudp: true
+    - client-fingerprint: chrome
+      encryption: none
+      flow: xtls-rprx-vision
+      http-opts:
+        headers: {}
+        path:
+            - /
+      name: "\U0001F1F7\U0001F1FARU_1|1.4MB/s"
+      network: tcp
+      port: 443  # 移除多余引号
+      reality-opts:
+        public-key: sbvKAdRy_0h33iRxgGwHAD1HC62WGwlkWwj0S5ptJEU
+        short-id: 9c2378562188c3cb
+      server: 212.113.123.230
+      servername: ru.denditop.site
+      tls: true
+      type: vless
+      udp: true
+      uuid: e4f5077b-3628-450c-92f9-b129b8a641a7
+      xudp: true
+    - client-fingerprint: chrome
+      flow: xtls-rprx-vision
+      name: "\U0001F1F2\U0001F1E9MD_1|1.8MB/s"
+      port: 443
+      reality-opts:
+        public-key: Yu1_Agl1_bJb298G9ukjGuvfksVTUs1X7laYJ3VqwwQ
+        short-id: b5e0cd9ca194c0a5
+      server: 185.234.57.207
+      servername: teamdocs.su
+      skip-cert-verify: false
+      tls: true
+      type: vless
+      udp: true
+      uuid: dd92c4f8-be88-4c61-84eb-d261f798071e
+    - name: "\U0001F1F3\U0001F1F1NL_1|2.2MB/s"
+      network: ws
+      port: 80  # 移除多余引号
+      server: nl-90w-c.southnetworks.cloud
+      servername: nl-90w-c.southnetworks.cloud
+      skip-cert-verify: false
+      tls: false
+      type: vless
+      udp: true
+      uuid: e08f1ad7-0c60-446d-baec-08b3b69bb3d0
+      ws-opts:
+        headers:
+            Host: nl-90w-c.southnetworks.cloud
+        path: /getWorkerUpdates
+    - alpn:
+        - h2
+      client-fingerprint: chrome
+      encryption: none
+      flow: xtls-rprx-vision
+      http-opts:
+        headers: {}
+        path:
+            - /
+      name: "\U0001F1E9\U0001F1EADE_3|2.4MB/s"
+      network: tcp
+      port: 443  # 移除多余引号
+      reality-opts:
+        public-key: ckRcueERkPqqjZABwxqni_J_Nbb70Q6k5fEEUAjoImw
+        short-id: ""
+      server: 178.162.240.165
+      servername: www.samsung.com
+      tls: true
+      type: vless
+      udp: true
+      uuid: a60e3576-21fa-4c50-bc09-7cc5f60ac1d3
+      xudp: true
+    - encryption: none
+      http-opts:
+        headers: {}
+        path:
+            - /
+      name: "\U0001F1EB\U0001F1EEFI_1|3.1MB/s"
+      network: tcp
+      port: 7225  # 移除多余引号
+      server: n5m8q1w4e7r3.the-scary-deep-forest-of-my-mind.top
+      type: vless
+      udp: true
+      uuid: b010e788-7e9f-48a0-97d9-b3250129eb15
+      xudp: true
+    - alpn:
+        - h2
+      client-fingerprint: chrome
+      encryption: none
+      name: "\U0001F1F3\U0001F1F1NL_2|2.1MB/s"
+      network: ws
+      port: 8443  # 移除多余引号
+      server: usa69.openbypass.org
+      servername: usa69.openbypass.org
+      tls: true
+      type: vless
+      udp: true
+      uuid: 93741b49-1a11-4882-b02f-10fb78bf0d22
+      ws-opts:
+        headers:
+            Host: usa69.openbypass.org
+            User-Agent: Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.110 Safari/537.36
+        path: /ws-vless/
+      xudp: true
+    - client-fingerprint: chrome
+      encryption: none
+      flow: xtls-rprx-vision
+      name: "\U0001F1E9\U0001F1EADE_4|1.0MB/s"
+      network: tcp
+      port: 443  # 移除多余引号
+      reality-opts:
+        public-key: BhTJ3phnq-Z-10aFKSsj1lzhA8mULR4L6leE4-0WTAs
+        short-id: ""
+      server: deu659.webunlocked.org
+      servername: www.fh-aachen.de
+      tls: true
+      type: vless
+      udp: true
+      uuid: c9051f7b-f42c-45a8-adaa-58822b353f59
+      xudp: true
+    - alpn:
+        - h2
+        - http/1.1
+      client-fingerprint: chrome
+      encryption: none
+      name: "\U0001F1E9\U0001F1EADE_5|2.9MB/s"
+      network: ws
+      port: 443  # 移除多余引号
+      server: 172.67.193.88
+      servername: MAHANteAm.noD32Cpu.iR
+      tls: true
+      type: vless
+      udp: true
+      uuid: mahanvpn-free-iran
+      ws-opts:
+        headers:
+            Host: MAHANteAm.noD32Cpu.iR
+            User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.75 Safari/537.36
+        path: /assets
+      xudp: true
+    - client-fingerprint: chrome
+      encryption: none
+      flow: xtls-rprx-vision
+      http-opts:
+        headers: {}
+        path:
+            - /
+      name: "\U0001F1F5\U0001F1F1PL_1|2.4MB/s"
+      network: tcp
+      port: 443  # 移除多余引号
+      reality-opts:
+        public-key: Qddpg8luihgzgx4g4uMJklXzlrMCd8L1igJSWrRUvSc
+        short-id: 8f222b3475800821
+      server: 158.160.221.132
+      servername: yandex.ru
+      tls: true
+      type: vless
+      udp: true
+      uuid: e8accc46-c511-42fb-919b-9283799a88a1
+      xudp: true
+    - alpn:
+        - http/1.1
+      client-fingerprint: chrome
+      name: "\U0001F1EB\U0001F1EEFI_2|1.8MB/s"
+      network: ws
+      password: b3a73d16-5d6e-45ad-8a73-314583408ec1
+      port: 443  # 移除多余引号
+      server: fic.buzzon.shop
+      skip-cert-verify: false
+      sni: fic.buzzon.shop
+      type: trojan
+      udp: true
+      ws-opts:
+        headers:
+            User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36
+        path: /SpB9iu4m7MqdokB1leJ
+    - alpn:
+        - http/1.1
+      client-fingerprint: chrome
+      encryption: none
+      flow: xtls-rprx-vision
+      name: "\U0001F1E9\U0001F1EADE_6|2.0MB/s"
+      network: tcp
+      port: 443  # 移除多余引号
+      server: 20.218.137.249
+      servername: jina-20218137249-direct.yektanet.co
+      tls: true
+      type: vless
+      udp: true
+      uuid: jina
+      xudp: true
+    - alpn:
+        - http/1.1
+      client-fingerprint: chrome
+      encryption: none
+      name: "\U0001F1EB\U0001F1EEFI_3|2.5MB/s"
+      network: ws
+      port: 443  # 移除多余引号
+      server: fic.buzzon.shop
+      servername: fic.buzzon.shop
+      tls: true
+      type: vless
+      udp: true
+      uuid: b3a73d16-5d6e-45ad-8a73-314583408ec1
+      ws-opts:
+        headers:
+            Host: fic.buzzon.shop
+            User-Agent: Mozilla/5.0 (Linux; Android 6.0.1; Redmi 4A Build/MMB29M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/60.0.3112.116 Mobile Safari/537.36
+        path: /s55dLF15ddokB1leJ
+      xudp: true
+    - encryption: none
+      name: "\U0001F1E9\U0001F1EADE_7|2.6MB/s"
+      network: ws
+      port: 2082  # 移除多余引号
+      server: cf.mahdi383ir.website
+      type: vless
+      udp: true
+      uuid: 48ce9313-4913-4100-eedf-bccf3f956dec
+      ws-opts:
+        headers:
+            Host: kh23h5k47xoocggw85cwt1mkdzi9vad4zoe2kfk.mahdi383ir.website
+            User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.76 Safari/537.36
+        path: /mahdi_383ir
+      xudp: true
+    - client-fingerprint: chrome
+      encryption: none
+      flow: xtls-rprx-vision
+      http-opts:
+        headers: {}
+        path:
+            - /
+      name: "\U0001F1EB\U0001F1F7FR_1|1.8MB/s"
+      network: tcp
+      port: 2096  # 移除多余引号
+      reality-opts:
+        public-key: 6G6julG6n7bkD8JvdLdGSniDXf9AYV12PGYNPQgg7xQ
+        short-id: f77d05d1bf4d
+      server: france.alpacalounge.com
+      servername: fr.alpacalounge.com
+      tls: true
+      type: vless
+      udp: true
+      uuid: a4ed2e0b-85d9-4a13-884c-eae6bb4f1800
+      xudp: true
+    - alterId: 0  # 移除多余引号
+      cipher: auto
+      name: "\U0001F1E9\U0001F1EADE_8|1.9MB/s"
+      network: ws
+      port: 8080  # 移除多余引号
+      server: digitalocean.com
+      skip-cert-verify: false
+      tls: false
+      type: vmess
+      udp: true
+      uuid: nasnet
+      ws-opts:
+        early-data-header-name: Sec-WebSocket-Protocol
+        headers:
+            Host: nasnet-571299667.rahavard365.co
+        max-early-data: 2560
+        path: /NASNET/cdn
+      xudp: true
+    - client-fingerprint: chrome
+      encryption: none
+      flow: xtls-rprx-vision
+      name: "\U0001F1F3\U0001F1F1NL_3|2.5MB/s"
+      network: tcp
+      port: 443  # 移除多余引号
+      server: usa69.openbypass.org
+      servername: usa69.openbypass.org
+      tls: true
+      type: vless
+      udp: true
+      uuid: 93741b49-1a11-4882-b02f-10fb78bf0d22
+      xudp: true
+    - client-fingerprint: chrome
+      encryption: none
+      grpc-opts:
+        grpc-service-name: grpc
+      name: "\U0001F1F7\U0001F1FARU_2|2.3MB/s"
+      network: grpc
+      port: 443  # 移除多余引号
+      reality-opts:
+        public-key: kz54nOxv8IOst-C_GQO5cf6106be0UakNbCEXiDuhHA
+        short-id: 3863adb3
+      server: 87.239.111.227
+      servername: m.vk.ru
+      tls: true
+      type: vless
+      udp: true
+      uuid: 895f94cb-5567-4731-bc2c-2f89a54bafe4
+      xudp: true
+    - alpn:
+        - http/1.1
+      alterId: 0  # 移除多余引号
+      cipher: auto
+      name: "\U0001F1EB\U0001F1EEFI_4|2.6MB/s"
+      network: ws
+      port: 443  # 移除多余引号
+      server: w.janebimashin.shop
+      servername: fic.buzzon.shop
+      skip-cert-verify: false
+      tls: true
+      type: vmess
+      udp: true
+      uuid: b3a73d16-5d6e-45ad-8a73-314583408ec1
+      ws-opts:
+        headers:
+            Host: fic.buzzon.shop
+        path: /1zi6gfLa27TdokB1leJ
+      xudp: true
+    - client-fingerprint: chrome
+      encryption: none
+      name: "\U0001F1E9\U0001F1EADE_9|2.5MB/s"
+      network: ws
+      port: 2053  # 移除多余引号
+      server: 188.114.98.0
+      servername: AzRPiNG1.mEliSHeKaN.SItE
+      tls: true
+      type: vless
+      udp: true
+      uuid: d7c862e5-e507-4dc8-8506-43d5d9de7387
+      ws-opts:
+        headers:
+            Host: azrping.melishekan.site
+            User-Agent: Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36
+        path: /eyJqdW5rIjoidDZLaDRBMWhpIiwicHJvdG9jb2wiOiJ2bCIsIm1vZGUiOiJwcm94eWlwIiwicGFuZWxJUHMiOltdfQ
+      xudp: true
+    - alpn:
+        - http/1.1
+      client-fingerprint: chrome
+      name: "\U0001F1E9\U0001F1EADE_10|2.9MB/s"
+      network: ws
+      password: bddcb397-6f52-458e-9937-dfbf69db1e48
+      port: 443  # 移除多余引号
+      server: w.janebimashin.shop
+      skip-cert-verify: false
+      sni: de3c.buzzon.shop
+      type: trojan
+      udp: true
+      ws-opts:
+        headers:
+            User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36
+        path: /KpY6QO5BT7YVIROnda
+    - encryption: none
+      name: "\U0001F1F3\U0001F1F1NL_4|2.3MB/s"
+      network: ws
+      port: 8080  # 移除多余引号
+      server: 188.114.97.222
+      servername: 188.114.97.222
+      type: vless
+      udp: true
+      uuid: 4307e484-6c8b-46d0-9df4-8b3983ab27b4
+      ws-opts:
+        headers:
+            Host: 029.electrocellco-cf-029.workers.dev
+            User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.67 Safari/537.36
+        path: /eyJqdW5rIjoiTzZZQ2dpUW1WIiwicHJvdG9jb2wiOiJ2bCIsIm1vZGUiOiJwcm94eWlwIiwicGFuZWxJUHMiOlsiNzcuMjM4LjIzMS4xNzkiLCIzMS40NC4yLjU3Il19?ed=2560
+      xudp: true
+    - alpn:
+        - h2
+        - http/1.1
+      client-fingerprint: chrome
+      encryption: none
+      name: "\U0001F1E9\U0001F1EADE_11|1.1MB/s"
+      network: ws
+      port: 2053  # 移除多余引号
+      server: cf.mahdi383ir.website
+      servername: kh2tiyozkxybazdibomyhih.mahdi383ir.website
+      tls: true
+      type: vless
+      udp: true
+      uuid: c3ffa4ee-fbbe-45e3-f737-db2f381f557e
+      ws-opts:
+        headers:
+            Host: kh2tiyozkxybazdibomyhih.mahdi383ir.website
+            User-Agent: Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36
+        path: /
+      xudp: true
+    - alpn:
+        - http/1.1
+      alterId: 0  # 移除多余引号
+      cipher: auto
+      name: "\U0001F1FA\U0001F1F8US_1|1.5MB/s"
+      network: ws
+      port: 443  # 移除多余引号
+      server: w.janebimashin.shop
+      servername: usc.buzzon.shop
+      skip-cert-verify: false
+      tls: true
+      type: vmess
+      udp: true
+      uuid: 2ba742a0-5c32-489b-8f05-72fd9b8e2729
+      ws-opts:
+        headers:
+            Host: usc.buzzon.shop
+        path: /D55BL12U5K8A2L9XMg
+      xudp: true
+    - alpn:
+        - http/1.1
+      client-fingerprint: chrome
+      name: "\U0001F1E9\U0001F1EADE_12|2.0MB/s"
+      network: ws
+      password: acadd87c-c8b4-4b6b-989b-64263e4d0329
+      port: 443  # 移除多余引号
+      server: de2c.buzzon.shop
+      skip-cert-verify: false
+      sni: de2c.buzzon.shop
+      type: trojan
+      udp: true
+      ws-opts:
+        headers:
+            User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36
+        path: /C7Uxy5S9pAi1VhW5NThds106
+    - alpn:
+        - h3
+        - h2
+        - http/1.1
+      client-fingerprint: chrome
+      name: "\U0001F1E9\U0001F1EADE_13|1.6MB/s"
+      network: ws
+      port: 8443  # 移除多余引号
+      server: argonshop1.parsianboton.ir
+      servername: 111.parsianboton.ir
+      tls: true
+      type: vless
+      udp: true
+      uuid: 1fd1d4af-9638-4fee-8276-f22fcaa46725
+      ws-opts:
+        headers:
+            Host: 111.parsianboton.ir
+            User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36
+        path: /?ed=80
+      xudp: true
+    - alpn:
+        - h2
+        - http/1.1
+      client-fingerprint: firefox
+      name: "\U0001F1E9\U0001F1EADE_14|2.3MB/s"
+      network: ws
+      port: 2096  # 移除多余引号
+      server: cf.mahdi383ir.website
+      servername: kh2tiyozkxybazdibomyhih.mahdi383ir.website
+      tls: true
+      type: vless
+      udp: true
+      uuid: cdddbb3f-5481-4d12-e3ee-597f97910d21
+      ws-opts:
+        headers:
+            Host: kh2tiyozkxybazdibomyhih.mahdi383ir.website
+            User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.67 Safari/537.36
+        path: /
+      xudp: true
+    - alpn:
+        - h2
+        - http/1.1
+      client-fingerprint: chrome
+      encryption: none
+      name: "\U0001F1E9\U0001F1EADE_15|1.6MB/s"
+      network: ws
+      port: 2083  # 移除多余引号
+      server: cf.mahdi383ir.website
+      servername: kh2tiyozkxybazdibomyhih.mahdi383ir.website
+      tls: true
+      type: vless
+      udp: true
+      uuid: 5a923f93-30d2-4f8b-ba28-afc637901e54
+      ws-opts:
+        headers:
+            Host: kh2tiyozkxybazdibomyhih.mahdi383ir.website
+            User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36
+        path: /
+      xudp: true
+    - alpn:
+        - http/1.1
+      client-fingerprint: chrome
+      encryption: none
+      name: "\U0001F1E9\U0001F1EADE_16|1.4MB/s"
+      network: ws
+      port: 443  # 移除多余引号
+      server: de3c.buzzon.shop
+      servername: de3c.buzzon.shop
+      tls: true
+      type: vless
+      udp: true
+      uuid: bddcb397-6f52-458e-9937-dfbf69db1e48
+      ws-opts:
+        headers:
+            Host: de3c.buzzon.shop
+            User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36
+        path: /sy5RZsmo3iYVIROnda
+      xudp: true
+
+proxy-groups:
+# 修正：负载均衡的proxies列表替换为实际存在的节点
+- name: 负载均衡
+  type: load-balance
+  url: https://www.gstatic.com/generate_204
+  interval: 300
+  strategy: round-robin
+  proxies:
+    - "\U0001F1E9\U0001F1EADE_1|2.3MB/s"
+    - "\U0001F1E9\U0001F1EADE_2|1.6MB/s"
+    - "\U0001F1F7\U0001F1FARU_1|1.4MB/s"
+    - "\U0001F1F2\U0001F1E9MD_1|1.8MB/s"
+    - "\U0001F1F3\U0001F1F1NL_1|2.2MB/s"
+    - "\U0001F1E9\U0001F1EADE_3|2.4MB/s"
+    - "\U0001F1EB\U0001F1EEFI_1|3.1MB/s"
+    - "\U0001F1F3\U0001F1F1NL_2|2.1MB/s"
+- name: 自动选择
+  type: url-test
+  url: https://www.gstatic.com/generate_204
+  interval: 300
+  tolerance: 50
+  proxies:
+    - "\U0001F1E9\U0001F1EADE_1|2.3MB/s"
+    - "\U0001F1E9\U0001F1EADE_2|1.6MB/s"
+    - "\U0001F1F7\U0001F1FARU_1|1.4MB/s"
+    - "\U0001F1F2\U0001F1E9MD_1|1.8MB/s"
+    - "\U0001F1F3\U0001F1F1NL_1|2.2MB/s"
+    - "\U0001F1E9\U0001F1EADE_3|2.4MB/s"
+    - "\U0001F1EB\U0001F1EEFI_1|3.1MB/s"
+    - "\U0001F1F3\U0001F1F1NL_2|2.1MB/s"	    
+- name: 🌍选择代理节点
+  type: select
+  proxies:
+    - 负载均衡                                         
+    - 自动选择
+    - DIRECT
+    - "\U0001F1E9\U0001F1EADE_1|2.3MB/s"
+    - "\U0001F1E9\U0001F1EADE_2|1.6MB/s"
+    - "\U0001F1F7\U0001F1FARU_1|1.4MB/s"
+    - "\U0001F1F2\U0001F1E9MD_1|1.8MB/s"
+    - "\U0001F1F3\U0001F1F1NL_1|2.2MB/s"
+    - "\U0001F1E9\U0001F1EADE_3|2.4MB/s"
+    - "\U0001F1EB\U0001F1EEFI_1|3.1MB/s"
+    - "\U0001F1F3\U0001F1F1NL_2|2.1MB/s"
+
+rules:
+  - DOMAIN,v2rayssr.com,🌍选择代理节点
+  - DOMAIN,bulianglin.com,🌍选择代理节点 
+  - GEOIP,LAN,DIRECT
+  - GEOIP,CN,DIRECT
+  - MATCH,🌍选择代理节点
