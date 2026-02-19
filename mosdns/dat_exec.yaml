@@ -5,13 +5,13 @@ plugins:
     args:
       files:
         - "/usr/local/etc/mosdns/domains/geoip_private.txt"
-  - tag: geoip_cn # cn ip
+  - tag: geoip_cn # cn ip（保留但仅用于内网逻辑）
     type: ip_set
     args:
       files:
         - "/usr/local/etc/mosdns/domains/geoip_cn.txt"
 
-  - tag: geosite_cn # cn 域名
+  - tag: geosite_cn # cn 域名（保留但不再用于DNS分支）
     type: domain_set
     args:
       files:
@@ -59,38 +59,25 @@ plugins:
       size: 1000
       lazy_cache_ttl: 60
 
-  # # exec
-  # - tag: ecs_cn # 附加 ecs-cn 信息
-  #   type: sequence
-  #   args:
-  #     - exec: ecs 202.120.2.100
-
-  # no ecs
-  # - tag: no_ecs # no ecs 信息
-  #   type: sequence
-  #   args:
-  #     - exec: ecs
-
-  # no ecs
+  # 统一关闭ECS（删除国内ECS逻辑）
   - tag: no_ecs
     type: "ecs_handler"
     args:
-      forward: false # 是否转发来自下游的 ecs
-      preset: "" # 发送预设 ecs
-      send: false # 是否发送 ecs
+      forward: false 
+      preset: "" 
+      send: false 
       mask4: 24
       mask6: 48 
   
-  # 附加 ecs cn 信息
-  - tag: ecs_cn
-    type: "ecs_handler"
-    args:
-      forward: false # 是否转发来自下游的 ecs
-      # 【核心修改】替换为你的实际本地 IP：10.0.0.251
-      preset: "127.0.0.1" # 发送预设 ecs
-      send: false # 是否发送 ecs
-      mask4: 24 # ipv4 掩码。默认 24
-      mask6: 48 # ipv6 掩码。默认 48
+  # 废弃国内ECS配置（可直接删除，保留仅作注释）
+  # - tag: ecs_cn
+  #   type: "ecs_handler"
+  #   args:
+  #     forward: false
+  #     preset: "127.0.0.1"
+  #     send: false
+  #     mask4: 24
+  #     mask6: 48
 
   # 调整 ttl
   - tag: ttl_1m
