@@ -1,0 +1,112 @@
+log:
+  level: warn
+  production: true
+  file: "/var/log/mosdns.log" 
+
+plugins:
+  - tag: "cache"
+    type: cache
+    args:
+      size: 32768
+      lazy_cache_ttl: 86400
+      dump_file: "/var/db/mosdns.cache"
+      dump_interval: 300
+
+  - tag: "reverse_lookup"
+    type: reverse_lookup
+    args:
+      size: 5000
+      ttl: 14400
+      handle_ptr: true
+
+  - tag: "remote_domain_set"
+    type: domain_set
+    args:
+      files:
+        - "/usr/local/etc/mosdns/domains/gfw.txt"
+        - "/usr/local/etc/mosdns/domains/proxy-list.txt"
+
+  - tag: "direct_domain_set"
+    type: domain_set
+    args:
+      files:
+        - "/usr/local/etc/mosdns/domains/direct-list.txt"
+
+  - tag: "direct_ip"
+    type: ip_set
+    args:
+      files:
+        - "/usr/local/etc/mosdns/ips/all_cn.txt"
+
+  - tag: "remote_forward"
+    type: forward
+    args:
+      upstreams:
+        - tag: dnscrypt_plugin_udp
+          addr: "udp://127.0.0.1:5353"
+          enable_pipeline: true
+          idle_timeout: 15 
+
+  - tag: "domestic_forward"
+    type: forward
+    args:
+      upstreams:
+        - tag: dnspod_doh
+          addr: "https://doh.pub/dns-query"
+          enable_pipeline: true
+          idle_timeout: 10
+
+  - tag: "ttl_sequence"
+    type: sequence
+    args:
+      - exec: ttl 600-86400
+      - exec: accept
+
+  - tag: "domestic_sequence"
+    type: sequence
+    args:
+      - exec: $domestic_forward
+      - exec: goto ttl_sequence
+
+  - tag: "remote_sequence"
+    type: sequence
+    args:
+      - exec: $remote_forward
+      - exec: goto ttl_sequence
+
+  - tag: "fallback"
+    type: fallback
+    args:
+      primary: remote_sequence
+      secondary: remote_sequence  # 始终仅重试代理逻辑，不切国内
+      threshold: 1800
+      always_standby: false
+
+  - tag: "main_sequence"
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      - exec: $cache
+      - matches: has_resp
+        exec: accept
+      - exec: $reverse_lookup
+      - matches: has_resp
+        exec: accept
+      - matches: "qname $remote_domain_set"
+        exec: goto remote_sequence
+      - matches: "qname $direct_domain_set"
+        exec: goto domestic_sequence
+      # 【关键修改2】移除“匹配国内IP则切国内DNS”的逻辑，避免兜底切换
+      - exec: $fallback  # 仅走代理的fallback逻辑，不触发国内DNS
+      
+  - tag: udp_server
+    type: udp_server
+    args:
+      entry: main_sequence
+      listen: :5335
+
+  - tag: tcp_server
+    type: tcp_server
+    args:
+      entry: main_sequence
+      listen: :5335

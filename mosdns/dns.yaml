@@ -54,12 +54,12 @@ plugins:
     args:
       concurrent: 3
       upstreams:
-        - addr: "https://dns.alidns.com/dns-query"
-          dial_addr: "223.6.6.6"
-        - addr: "tls://dns.alidns.com"
-          dial_addr: "223.5.5.5"
-        - addr: "https://dns.alidns.com/dns-query"
-          dial_addr: "223.5.5.5"
+        - addr: "https://doh.pub/dns-query"
+          dial_addr: "1.12.12.12"
+        - addr: "https://doh.pub/dns-query"
+          dial_addr: "120.53.53.53"
+        - addr: "tls://dot.pub"
+          dial_addr: "120.53.53.53"
 
   # 国内备用DNS：DNSPod
   - tag: dnspod
@@ -80,14 +80,14 @@ plugins:
     args:
       concurrent: 1
       upstreams:
-        - addr: "udp://10.0.0.251:53"
+        - addr: "udp://127.0.0.1:53"
 
   - tag: self_host
     type: forward
     args:
       concurrent: 1
       upstreams:
-        - addr: "udp://10.0.0.251:53"
+        - addr: "udp://127.0.0.1:53"
 
   # 拒绝响应相关
   - tag: reject_2
