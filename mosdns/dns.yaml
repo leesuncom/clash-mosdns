@@ -1,99 +1,54 @@
 plugins:
   ################ DNS #################
-  # google doh dot h3
+  # google doh dot h3（代理用）
   - tag: google
     type: forward
     args:
       concurrent: 3
       upstreams:
-        # - addr: "https://dns.google/dns-query"
-        #   dial_addr: "2001:4860:4860::6464"
-        # - addr: "https://dns.google/dns-query"
-        #   dial_addr: "2001:4860:4860::0064"
-        # - addr: "https://dns.google/dns-query"
-        #   dial_addr: "2001:4860:4860::8844"
-        # - addr: "https://dns.google/dns-query"
-        #   dial_addr: "2001:4860:4860::8888"
         - addr: "https://dns.google/dns-query"
           dial_addr: "8.8.4.4"
         - addr: "https://dns.google/dns-query"
           dial_addr: "8.8.8.8"
-
         - addr: "tls://dns.google"
           dial_addr: "8.8.4.4"
-          # enable_pipeline: true # TCP/DoT 启用 RFC 7766 新的 query pipelining 连接复用模式
-        # - addr: "tls://dns.google"
-        #   dial_addr: "2001:4860:4860::8888"
-        #   enable_pipeline: true
         - addr: "tls://dns.google"
           dial_addr: "8.8.8.8"
-          # enable_pipeline: true
-        # h3
-        # - addr: "https://dns.google/dns-query"
-        #   dial_addr: "2001:4860:4860::8844"
-        #   enable_http3: true
         - addr: "https://dns.google/dns-query"
           dial_addr: "8.8.4.4"
           enable_http3: true
-        # - addr: "https://dns.google/dns-query"
-        #   dial_addr: "2001:4860:4860::8888"
-        #   enable_http3: true
         - addr: "https://dns.google/dns-query"
           dial_addr: "8.8.8.8"
           enable_http3: true
 
-  # cloudflare doh dot h3
+  # cloudflare doh dot h3（代理备用）
   - tag: cloudflare
     type: forward
     args:
       concurrent: 2
       upstreams:
-        # - addr: "https://1.1.1.1/dns-query"
-        #   dial_addr: "1.1.1.1"
-
         - addr: "tls://1.1.1.1"
           dial_addr: "1.1.1.1"
-          # enable_pipeline: true # TCP/DoT 启用 RFC 7766 新的 query pipelining 连接复用模式
         - addr: "tls://1.1.1.1"
           dial_addr: "1.1.1.1"
-          # enable_pipeline: true
 
-  # - tag: nextdns
-  #   type: forward
-  #   args:
-  #     concurrent: 1
-  #     upstreams:
-  #       # - addr: "https://dns.nextdns.io"
-  #       #   dial_addr: "45.90.28.186"
-  #       #   enable_http3: true
-  #       # - addr: "https://dns.nextdns.io"
-  #       #   dial_addr: "2a07:a8c0::ae:d5cb"
-  #       #   enable_http3: true
-
-  #       - addr: "$REMOTE_DNS_SERVER_1"
-  #         enable_pipeline: true
-
-  # 查询gfw网站时使用
+  # 查询gfw网站时使用（代理）
   - tag: forward_remote
     type: forward
     args:
-      # concurrent: 1
       upstreams:
-        # 【修改1】替换 $SELF_DNS_SERVER_UDP 为设备实际 DNS 地址
         - addr: "udp://127.0.0.1:5353"
           enable_pipeline: true
 
-  # 非cn网站查询时使用
+  # 国外代理主DNS
   - tag: self_hosted
     type: forward
     args:
-      # concurrent: 1
       upstreams:
-        # 【修改2】替换 $SELF_DNS_SERVER_UDP 为设备实际 DNS 地址
         - addr: "udp://127.0.0.1:5353"
           enable_pipeline: true
 
-  # ali doh dot h3
+  # 国内主DNS：阿里DNS（强化可用性）
   - tag: ali
     type: forward
     args:
@@ -101,21 +56,12 @@ plugins:
       upstreams:
         - addr: "https://dns.alidns.com/dns-query"
           dial_addr: "223.6.6.6"
-
-        # - addr: "tls://dns.alidns.com"
-        #   dial_addr: "2400:3200:baba::1"
-        #   enable_pipeline: true
         - addr: "tls://dns.alidns.com"
           dial_addr: "223.5.5.5"
-          # enable_pipeline: true
-
         - addr: "https://dns.alidns.com/dns-query"
           dial_addr: "223.5.5.5"
-        # - addr: "https://dns.alidns.com/dns-query"
-        #   dial_addr: "2400:3200::1"
-        #   enable_http3: true
 
-  # dnspod doh dot
+  # 国内备用DNS：DNSPod
   - tag: dnspod
     type: forward
     args:
@@ -125,21 +71,15 @@ plugins:
           dial_addr: "1.12.12.12"
         - addr: "https://doh.pub/dns-query"
           dial_addr: "120.53.53.53"
-
-        # - addr: "tls://dot.pub"
-        #   dial_addr: "1.12.12.12"
-        #   enable_pipeline: true
         - addr: "tls://dot.pub"
           dial_addr: "120.53.53.53"
-          # enable_pipeline: true
 
-  # local dns
+  # local dns（局域网）
   - tag: local
     type: forward
     args:
       concurrent: 1
       upstreams:
-        # 【修改3】替换 $ROUTER_HOST 为路由器/网关 IP（示例：10.0.0.1，需确认你的实际网关）
         - addr: "udp://10.0.0.251:53"
 
   - tag: self_host
@@ -147,28 +87,24 @@ plugins:
     args:
       concurrent: 1
       upstreams:
-        # 【修改4】替换 $ROUTER_HOST 为路由器/网关 IP（示例：10.0.0.1）
         - addr: "udp://10.0.0.251:53"
 
-  # server 失败
+  # 拒绝响应相关
   - tag: reject_2
     type: sequence
     args:
       - exec: reject 2
 
-  # 拒绝响应
   - tag: reject_3
     type: sequence
     args:
       - exec: reject 3
 
-  # 不支持的操作
   - tag: reject_5
     type: sequence
     args:
       - exec: reject 5
 
-  # 返回不可达ip
   - tag: blackhole
     type: sequence
     args:
