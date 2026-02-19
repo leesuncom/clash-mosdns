@@ -29,34 +29,20 @@ plugins:
       - exec: $reject_3
 
   ################ 序列 #################
-  - tag: dns_nocn
+  # 统一使用代理DNS作为核心上游（删除国内DNS分支）
+  - tag: dns_proxy
     type: "fallback"
     args:
-      primary: self_hosted # 主dns
-      secondary: cloudflare # 备用dns
+      primary: self_hosted # 代理主DNS
+      secondary: cloudflare # 代理备用DNS
       threshold: 700 # 无响应切换 毫秒
       always_standby: true # 副可执行插件始终待命
-  
-  # dns-cn 序列
-  - tag: dns_cn
-    type: "fallback"
-    args:
-      primary: ali # 主dns
-      secondary: dnspod # 备用dns
-      threshold: 500
-      always_standby: true # 副可执行插件始终待命
 
-  - tag: dns_nocn_seq
+  - tag: dns_proxy_seq
     type: sequence
     args:
-      - exec: query_summary dns_nocn
-      - exec: $dns_nocn
-
-  - tag: dns_cn_seq
-    type: sequence
-    args:
-      - exec: query_summary dns_cn
-      - exec: $dns_cn
+      - exec: query_summary dns_proxy
+      - exec: $dns_proxy
 
   - tag: local_seq
     type: sequence
@@ -64,65 +50,61 @@ plugins:
       - exec: query_summary local
       - exec: $local
 
-  - tag: fallback_seq # 其他特殊情况统一使用 dns_cn 处理
+  # 所有fallback/other逻辑统一走代理DNS
+  - tag: fallback_seq
     type: sequence
     args:
       - exec: query_summary fallback
-      - exec: $dns_cn
+      - exec: $dns_proxy_seq
 
-  - tag: other_seq # 其他特殊情况统一使用 dns_cn 处理
+  - tag: other_seq
     type: sequence
     args:
       - exec: query_summary other
-      - exec: $dns_cn
+      - exec: $dns_proxy_seq
 
-  # query cn 域名
+  # 废弃原国内域名分支，统一走代理
   - tag: query_cn
     type: sequence
     args:
-      - exec: $ecs_cn
-      - exec: $dns_cn_seq
-      - matches: "!resp_ip $geoip_cn" # 响应非 cn ip
-        exec: drop_resp # 丢弃
+      - exec: $no_ecs # 统一关闭ECS
+      - exec: $dns_proxy_seq
 
-  # query nocn 域名
+  # 非CN域名分支保持，但逻辑统一走代理（删除IP过滤）
   - tag: query_nocn
     type: sequence
     args:
       - exec: $no_ecs
       - exec: prefer_ipv4
-      - exec: $dns_nocn_seq
-      - matches: "resp_ip $geoip_cn" # 响应为 cn ip
-        exec: drop_resp # 丢弃
+      - exec: $dns_proxy_seq
 
   - tag: query_gfw
     type: sequence
     args:
-      - exec: $forward_remote
+      - exec: $forward_remote # 保持GFW分支走代理
 
-  # query fallback
+  # fallback分支统一走代理
   - tag: query_fallback
     type: sequence
     args:
-      - exec: $ecs_cn
+      - exec: $no_ecs # 关闭国内ECS
       - exec: prefer_ipv4
       - exec: $fallback_seq
 
-  # query lan
+  # 局域网分支保留（仅内网IP走本地DNS）
   - tag: query_lan
     type: sequence
     args:
       - exec: $cache_lan
       - matches: has_resp # 命中了 lan cache
         exec: return
-      # - exec: $no_ecs
       - exec: $local_seq
 
-  # 其他所有情况
+  # 其他所有情况统一走代理
   - tag: query_other 
     type: sequence
     args:
-      # - exec: $no_ecs
+      - exec: $no_ecs
       - exec: $other_seq
 
   - tag: pre_handle
@@ -151,14 +133,12 @@ plugins:
       - matches: has_resp
         exec: goto main_handle
 
-
   - tag: query_self_host
     type: sequence
     args:
-      # - exec: $cache_short
+      - exec: $cache_short
       - matches: has_resp
         exec: accept
-      # - exec: $no_ecs
       - exec: query_summary self_host
       - exec: $self_host
 
@@ -174,7 +154,7 @@ plugins:
       - matches: has_resp
         exec: goto self_host_handle
 
-  # pre_sequence
+  # 预处理序列（仅保留必要过滤，删除国内逻辑）
   - tag: pre_sequence
     type: sequence
     args:
@@ -200,7 +180,7 @@ plugins:
         exec: $query_self_host
       - exec: jump has_self_host_resp
 
-  # main_sequence
+  # 主执行序列（删除国内域名区分，所有请求走代理）
   - tag: main_sequence
     type: sequence
     args:
@@ -208,19 +188,9 @@ plugins:
         exec: $reject_ad
       - exec: $cache_wan # cache wan
       - exec: jump has_resp_main
-      - matches: qname $geosite_cn # cn 域名
-        exec: $query_cn
-      - exec: jump has_resp_main
-      # 检查是否符合GFW域名规则
-      - matches: qname $geosite_gfw
-        exec: $query_gfw
-      - exec: jump has_resp_main
-      - matches: qname $geosite_location-!cn # 非 cn 域名
-        exec: $query_nocn
-      - exec: jump has_resp_main
-      # 其他
-      - exec: $no_ecs
-      - exec: $query_fallback
+      # 所有域名（无论CN/非CN/GFW）统一走代理
+      - exec: $no_ecs # 统一关闭ECS
+      - exec: $dns_proxy_seq
       - exec: jump has_resp_main
 
   - tag: sequence
