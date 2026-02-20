@@ -1,0 +1,112 @@
+plugins:
+
+  - tag: ecs_jp
+    type: ecs_handler
+    args:
+      forward: false
+      preset: 13.78.0.0
+      send: false
+      mask4: 17
+
+  - tag: ecs_sjc
+    type: ecs_handler
+    args:
+      forward: false
+      preset: 151.101.48.0
+      send: false
+      mask4: 22
+
+  - tag: ecs_lax
+    type: ecs_handler
+    args:
+      forward: false
+      preset: 151.101.196.0
+      send: false
+      mask4: 22
+
+  # 不应处理本地 DNS 请求，防止死循环。正确顺序应该是 dnsmasq --> OpenClash（可选）--> mosdns。
+  # - tag: "forward_lan"
+  #   type: forward
+  #   args:
+  #     concurrent: 1
+  #     upstream:
+  #       - addr: "192.168.1.1"
+
+  # 1. 本地兜底 DNS（恢复运营商 DNS 设计，保留原作用）
+  - tag: "forward_local"
+    type: forward
+    args:
+      concurrent: 1
+      upstreams:
+        - addr: "202.103.24.68" # 替换为你实际的运营商 DNS IP
+          enable_pipeline: true # UDP 管线化，提升效率
+
+  - tag: "forward_alidns"
+    type: forward
+    args:
+      concurrent: 1
+      upstreams:
+        - addr: "223.5.5.5"
+        - addr: "quic://223.6.6.6:853"
+        - addr: "https://dns.alidns.com/dns-query"
+          dial_addr: "223.5.5.5"
+          enable_http3: false
+
+  - tag: "forward_dnspod"
+    type: forward
+    args:
+      concurrent: 1
+      upstreams:
+        - addr: "https://doh.pub/dns-query"
+          dial_addr: "1.12.12.12"
+        - addr: "https://doh.pub/dns-query"
+          dial_addr: "120.53.53.53"
+        - addr: "tls://dot.pub"
+          dial_addr: "120.53.53.53"
+
+
+  # 3. 境外 DNS（修正参数错误，补充备用节点）
+  - tag: "forward_remote"
+    type: "forward"
+    args:
+      concurrent: 1
+      upstreams:
+        - addr: "tls://1.1.1.1" # Cloudflare DoT
+          dial_addr: "1.1.1.1"
+          # 移除无效的 enable_http3，DoT 不支持 HTTP3
+        - addr: "https://cloudflare-dns.com/dns-query" # 补充 Cloudflare DoH 备用
+          dial_addr: "1.0.0.1"
+          enable_http3: true
+        - addr: "udp://127.0.0.1:5353" # 本地代理 DNS 兜底
+          enable_pipeline: true
+
+  # 国内域名解析序列
+  - tag: domestic_sequence
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      - exec: $forward_dnspod # 国内域名走阿里DNS
+      - exec: accept # 有结果直接返回
+
+  - tag: remote_sequence
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      - exec: $ecs_sjc
+      - exec: $forward_remote
+      - exec: return
+
+  - tag: remote_sequence_ipv6
+    type: sequence
+    args:
+      - exec: prefer_ipv6
+      - exec: $forward_remote
+      - exec: return
+
+
+  - tag: has_resp_sequence
+    type: sequence
+    args:
+      - matches:
+          - has_resp
+        exec: accept

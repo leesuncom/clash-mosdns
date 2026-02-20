@@ -1,0 +1,63 @@
+# AWS 电信用美国比日韩好
+ebaycdn.net
+ebaystatic.com
+ebay.com
+samsungcloud.com
+
+kernel.org
+
+# CDN77
+b-cdn.net
+rsc.cdn77.org
+
+# Edgecast
+full:images.nvidia.com
+full:international-gfe.download.nvidia.com
+
+asus.com
+
+res-2.public.onecdn.static.microsoft
+cdn-office.azureedge.net
+cdn-office.ec.azureedge.net
+psg-prod-eastus.azureedge.net
+psg-prod-eastus.ec.azureedge.net
+
+deltacdn.net
+epsiloncdn.net
+phicdn.net
+sigmacdn.net
+v0cdn.net
+xicdn.net
+
+# Limelight
+llnwi.net
+
+# Salesforce
+full:adaptivesupport.amd.com
+full:support.anker.com
+full:professionalsupport.dolby.com
+full:support.dolby.com
+edge2.salesforce.com
+live.siteforce.com
+
+# Tencent
+levelinfinite.com
+midasbuy.com
+playdeltaforce.com
+playerinfinite.com
+ovslegodl.sched.ovscdns.com
+ovslegovideo.sched.apdcdn.com
+
+base64encode.org
+base64decode.org
+beautifyjson.org
+minifyjson.org
+prettifycss.com
+prettifyjs.net
+uglifycss.com
+uglifyjs.net
+urlencoder.org
+urldecoder.org
+balancer.hazota.eu
+
+33across.com

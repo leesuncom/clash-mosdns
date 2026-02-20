@@ -1,217 +1,351 @@
 log:
-  level: "debug"
-  # file: "/var/log/mosdns.log"
+  level: debug
+  file: "/var/log/mosdns.log"
 
+# API 入口设置     
 api:
-  http: "0.0.0.0:8338" # api 监听地址
+  http: ":9091" # 在该地址启动 api 接口。
 
-include:
-  - "dat_exec.yaml"
-  - "dns.yaml"
+# []string, 从其他配置文件载入 plugins 插件设置。
+# include 的插件会比本配置文件中的插件先初始化。
+include: 
+  - "/usr/local/etc/mosdns/load_rules.yaml"
+  - "/usr/local/etc/mosdns/forward.yaml"
 
 plugins:
-  - tag: reject_null_domain
+  # IP 优选，需要定期修改，最好填写 2-4 个
+  - tag: blackhole_akamai_ipv4 # 替换部分 AKAMAI 域名 IP，详见 https://github.com/IrineSistiana/mosdns/discussions/489
     type: sequence
     args:
-      - exec: query_summary reject_null_domain
-      - exec: $reject_3
+      - exec: black_hole 119.149.188.15 202.142.229.59 223.44.51.33 # best_akamai_ipv4
+      - exec: ttl 3600-0
+      - exec: accept # 运行 black_hole 之后接受请求，不再进行后续判断
 
-  - tag: reject_qtype65
+  - tag: blackhole_akamai_ipv6
     type: sequence
     args:
-      - exec: query_summary reject_qtype65
-      - exec: $reject_3
-
-  - tag: reject_ad
-    type: sequence
-    args:
-      - exec: query_summary reject_adlist
-      - exec: $reject_3
-
-  ################ 序列 #################
-  # 国外域名专用：代理DNS fallback（仅主备切换，无国内回退）
-  - tag: dns_proxy
-    type: "fallback"
-    args:
-      primary: self_hosted # 代理主DNS
-      secondary: cloudflare # 代理备用DNS
-      threshold: 700 # 无响应切换 毫秒
-      always_standby: true # 副可执行插件始终待命
-      # 关键：失败后直接终止，不回退到国内DNS
-
-
-  # 国内域名专用：仅走国内DNS（阿里/DNSPod）
-  - tag: dns_cn
-    type: "fallback"
-    args:
-      primary: ali # 国内主DNS（阿里）
-      secondary: dnspod # 国内备用DNS（DNSPod）
-      threshold: 700
-      always_standby: true
-
-  # 国外域名执行序列（仅走代理）
-  - tag: dns_proxy_seq
-    type: sequence
-    args:
-      - exec: query_summary dns_proxy
-      - exec: $dns_proxy
-
-  # 国内域名执行序列（仅走国内DNS）
-  - tag: dns_cn_seq
-    type: sequence
-    args:
-      - exec: query_summary dns_cn
-      - exec: $dns_cn
-
-  - tag: local_seq
-    type: sequence
-    args:
-      - exec: query_summary local
-      - exec: $local
-
-  # 国内域名分支（仅走国内DNS）
-  - tag: query_cn
-    type: sequence
-    args:
-      - exec: $no_ecs # 关闭ECS
-      - exec: $dns_cn_seq
-
-  # 国外域名分支（仅走代理，不通也不触发国内）
-  - tag: query_nocn
-    type: sequence
-    args:
-      - exec: $no_ecs
-      - exec: prefer_ipv4
-      - exec: $dns_proxy_seq
-
-  # GFW分支仍走代理
-  - tag: query_gfw
-    type: sequence
-    args:
-      - exec: $forward_remote # 保持GFW分支走代理
-
-  # 局域网分支保留（仅内网IP走本地DNS）
-  - tag: query_lan
-    type: sequence
-    args:
-      - exec: $cache_lan
-      - matches: has_resp # 命中了 lan cache
-        exec: return
-      - exec: $local_seq
-
-  # 其他所有情况：非国内/非局域网→走代理
-  - tag: query_other 
-    type: sequence
-    args:
-      - exec: $no_ecs
-      - exec: $dns_proxy_seq
-
-  - tag: pre_handle
-    type: sequence
-    args:
-      - exec: $ttl_1h # ttl 1h
-      - exec: accept # 接受响应,终止流程
-
-  - tag: main_handle
-    type: sequence
-    args:
-      - exec: $ttl_5m # ttl 5min
-      - exec: accept # 接受响应,终止流程
-
-  - tag: has_resp_pre
-    type: sequence
-    args:
-      - matches: has_resp # 如果 pre 序列已有响应
-        exec: goto pre_handle
-
-  - tag: has_resp_main
-    type: sequence
-    args:
-      - matches: has_resp
-        exec: goto main_handle
-
-  - tag: query_self_host
-    type: sequence
-    args:
-      - exec: $cache_short
-      - matches: has_resp
-        exec: accept
-      - exec: query_summary self_host
-      - exec: $self_host
-
-  - tag: self_host_handle
-    type: sequence
-    args:
-      - exec: $ttl_1m
+      - exec: black_hole 2600:140b:1000::1730:d5ab 2600:140b:1000::1730:d5ce # best_akamai_ipv6
+      - exec: ttl 3600-0
       - exec: accept
 
-  - tag: has_self_host_resp
+  - tag: blackhole_cachefly_ipv4
     type: sequence
     args:
-      - matches: has_resp
-        exec: goto self_host_handle
+      - exec: black_hole 205.234.175.0 # best_cachefly_ipv4
+      - exec: ttl 3600-0
+      - exec: accept
 
-  # 预处理序列（保留必要过滤）
-  - tag: pre_sequence
+  - tag: blackhole_cloudflare_ipv4
     type: sequence
     args:
-      - matches: qtype 65 # TYPE 65 类型|DNS服务器状态
-        exec: $reject_qtype65
-      - matches: "qname keyword::" # 无效域名
-        exec: $reject_null_domain
-      - matches: qtype 12 # TYPE 12 类型|反查域名 PTR 记录
-        exec: $query_other
-      - matches: qtype 255 # TYPE 255 类型|DNS服务器拓展支持
-        exec: $query_other
-      - matches: ptr_ip $geoip_private # private ip
-        exec: $query_lan
-      - exec: jump has_resp_pre
+      - exec: black_hole 104.17.7.198 104.17.61.114 162.159.0.195 162.159.7.75 # best_cloudflare_ipv4
+      - exec: ttl 3600-0
+      - exec: accept
 
-  - tag: self_host_sequence
+  - tag: blackhole_cloudflare_ipv6
     type: sequence
     args:
-      - matches: qname $self_host_domain
-        exec: $cache_short
-      - exec: jump has_self_host_resp
-      - matches: qname $self_host_domain
-        exec: $query_self_host
-      - exec: jump has_self_host_resp
+      - exec: black_hole 2a06:98c1:310f::e0c0:131c:2cb3 2a06:98c1:310f::ee3c:1d43:fc2e:6f6c # best_cloudflare_ipv6
+      - exec: ttl 3600-0
+      - exec: accept
 
-  # 主执行序列（核心：区分国内/国外域名路由）
-  - tag: main_sequence
+  - tag: blackhole_cloudfront_ipv4
     type: sequence
     args:
-      - matches: qname $geosite_ads-all # ad 域名
-        exec: $reject_ad
-      - exec: $cache_wan # cache wan
-      - exec: jump has_resp_main
-      # 第一步：匹配国内域名→走国内DNS
-      - matches: qname $geosite_cn
-        exec: $query_cn
-      - exec: jump has_resp_main
-      # 第二步：匹配GFW域名→走代理
-      - matches: qname $geosite_gfw
-        exec: $query_gfw
-      - exec: jump has_resp_main
-      # 第三步：非国内域名→走代理（不通也不回退）
-      - exec: $no_ecs # 统一关闭ECS
-      - exec: $query_nocn
-      - exec: jump has_resp_main
+      - exec: black_hole 18.172.26.139 18.172.28.94 52.84.151.126 52.84.228.48 # best_cloudfront_ipv4
+      - exec: ttl 3600-0
+      - exec: accept
 
-  - tag: sequence
+  - tag: blackhole_cloudfront_ipv6
     type: sequence
     args:
-      - exec: metrics_collector metrics
-      - exec: jump self_host_sequence
-      - exec: jump pre_sequence # 预处理
-      - exec: jump main_sequence # 主执行序列
+      - exec: black_hole 2600:9000:20e9:1edf:3560:977b:c990:1f75 2600:9000:20e9:1edf:35c0:29ed:b6ac:7b3b # best_cloudfront_ipv6
+      - exec: ttl 3600-0
+      - exec: accept
 
-  # 在同一端口启动 udp 和 tcp 服务器。
-  - type: udp_server
+  - tag: blackhole_sucuri_ipv4
+    type: sequence
     args:
-      entry: sequence
-      listen: :5335
-  - type: tcp_server
+      - exec: black_hole 192.88.134.24 192.88.134.30 # best_sucuri_ipv4
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: blackhole_ghs_ipv4
+    type: sequence
     args:
-      entry: sequence
-      listen: :5335
+      - exec: black_hole 142.250.196.243 # best_ghs_ipv4
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: blackhole_ghs_ipv6
+    type: sequence
+    args:
+      - exec: black_hole 2404:6800:4004:821::2013 # best_ghs_ipv6
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: blackhole_cdn77_ipv6
+    type: sequence
+    args:
+      - exec: black_hole ::0 # best_cdn77_ipv6
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: change_cdn_ip_akamai
+    type: sequence
+    args:
+      - matches:
+          - cname akamai.net akamaized.net
+          - qtype 1
+          - has_wanted_ans # 防止纯 IPV6 域名被替换
+        exec: jump blackhole_akamai_ipv4
+      - matches:
+          - cname akamai.net akamaized.net
+          - qtype 28
+          - has_wanted_ans
+        exec: jump blackhole_akamai_ipv6 # 如果不需要对纯 IPV6 域名优选可以去掉这一段
+      - exec: return
+
+  - tag: change_cdn_ip # https://github.com/XIU2/CloudflareSpeedTest/discussions/317
+    type: sequence
+    args:
+      - matches:
+          - cname full:custom.crisp.help pacloudflare.com cc-ecdn.net # Cloudflare Spectrum、Salesforce 不进行替换
+        exec: return
+      - matches:
+          - qtype 1
+          - resp_ip $cloudflare_ipv4
+        exec: jump blackhole_cloudflare_ipv4
+      - matches:
+          - qtype 1
+          - resp_ip $cloudfront_ipv4
+        exec: jump blackhole_cloudfront_ipv4
+      - matches:
+          - qtype 1
+          - cname cloudfront.net
+        exec: jump blackhole_cloudfront_ipv4
+      - matches:
+          - qtype 1
+          - resp_ip $cachefly_ipv4
+        exec: jump blackhole_cachefly_ipv4
+      - matches:
+          - qtype 1
+          - resp_ip $sucuri_ipv4
+        exec: jump blackhole_sucuri_ipv4
+      - matches:
+          - qtype 1
+          - cname full:ghs.googlehosted.com
+        exec: jump blackhole_ghs_ipv4
+      - matches:
+          - qtype 28
+          - resp_ip $cloudflare_ipv6
+        exec: jump blackhole_cloudflare_ipv6
+      - matches:
+          - qtype 28
+          - resp_ip $cloudfront_ipv6
+        exec: jump blackhole_cloudfront_ipv6
+      - matches:
+          - qtype 28
+          - has_wanted_ans
+          - cname cloudfront.net
+        exec: jump blackhole_cloudfront_ipv6
+      - matches:
+          - qtype 28
+          - has_wanted_ans
+          - qname regexp:.+\.rsc\.cdn77\.org$
+        exec: jump blackhole_cdn77_ipv6 # 返回 ::0 屏蔽 ipv6
+      - matches:
+          - qtype 28
+          - has_wanted_ans
+          - cname rsc.cdn77.org
+        exec: jump blackhole_cdn77_ipv6 # 返回 ::0 屏蔽 ipv6
+      - matches:
+          - qtype 28
+          - cname full:ghs.googlehosted.com
+        exec: jump blackhole_ghs_ipv6
+      - exec: return
+
+  - tag: gfw_sequence # 处理 GFW 域名
+    type: sequence
+    args:
+      - exec: jump remote_sequence
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept # 查询失败也会停止，防止后续查询回落到国内上游
+
+  - tag: default_sequence # 默认使用 fallback
+    type: sequence
+    args:
+      - exec: jump remote_sequence
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  - tag: default_sequence_original # 使用 fallback，不替换 CDN IP
+    type: sequence
+    args:
+      - exec: jump remote_sequence
+      - exec: accept
+
+  - tag: banned_sequence
+    type: sequence
+    args:
+      - exec: debug_print "DNS poisoning detected"
+      - exec: jump default_sequence
+
+  - tag: local_sequence
+    type: sequence
+    args:
+      - exec: $forward_local
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  - tag: ali_sequence_ipv4
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      # 江苏电信如使用 alidns 请添加其他地区 ECS 否则易跳反诈
+      # - exec: $ecs_shanghai
+      - exec: $forward_alidns
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  - tag: tencent_sequence_ipv4
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      - exec: $forward_dnspod
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  # 阿里日本准确度高，腾讯美国准确度高
+  - tag: ali_sequence_jp
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      - exec: $ecs_jp
+      - exec: $forward_alidns
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  - tag: tencent_sequence_sjc
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      - exec: $ecs_sjc
+      - exec: $forward_dnspod
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  - tag: tencent_sequence_lax
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      - exec: $ecs_lax
+      - exec: $forward_dnspod
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  - tag: main
+    type: sequence
+    args:
+      - matches:
+          - qtype 65
+        exec: reject 3 # 屏蔽 QTYPE 65
+
+      - exec: $redirect
+      - exec: $hosts
+      - exec: jump has_resp_sequence
+      - exec: $hosts_fastly
+      - exec: jump has_resp_sequence
+      - exec: $hosts_akamai
+      - exec: jump has_resp_sequence
+
+      - matches:
+          - qname $privatelist #内网域名
+        exec: reject 5 # 屏蔽内网域名
+        # exec: $forward_lan # 查询内网 DNS
+      # - exec: jump has_resp_sequence
+
+      - matches:
+          - qname $whitelist # DDNS 和其他白名单
+        exec: $forward_local
+      - exec: ttl 5-180
+      - exec: jump has_resp_sequence
+
+      - matches:
+          - qname $blocklist # 黑名单，可添加去广告列表
+        exec: reject 5
+
+      - exec: $cache_0 # 下面的请求结果均进入缓存
+      - exec: jump has_resp_sequence
+
+      - matches:
+          - qname $ipv6list
+        exec: jump remote_sequence_ipv6 # IPV6 域名请求远程 DNS
+
+      - matches:
+          - qname $originallist # 不进行 IP 替换的域名，通常是游戏等使用非常用端口的域名
+        exec: jump default_sequence_original
+
+      - matches:
+          - qname $greylist
+        exec: jump default_sequence # 污染域名请求远程 DNS
+
+      - matches:
+          - qname $jp_dns_list $akamailist
+        exec: jump ali_sequence_jp
+
+      - matches:
+          - qname $us_dns_list
+        exec: jump tencent_sequence_lax # 给了 LAX 和 SJC，自由选择
+
+      - matches:
+          - qname $cdnlist apple.com icloud.com live.com live.net msftconnecttest.com office365.com office.com outlook.com trafficmanager.net xbox.com
+        exec: jump tencent_sequence_ipv4 # 我这里用腾讯 DNS 返回东京电信的概率较高，可以替换成其他。
+
+      - matches:
+          - qname $gfwlist
+        exec: jump gfw_sequence # GFW 域名请求海外 DNS
+
+      - matches:
+          - qname $geosite_cn # 国内域名走运营商 DNS
+        exec: jump local_sequence
+
+      # 策略 1：默认查询国内上游，入返回境外 IP，再次将域名交给可信 DNS 查询。
+      # 策略 2：注释上方策略 1 的配置，默认查询可信 DNS，可以避免“DNS 泄露”，对上游稳定性要求更高
+      - exec: jump default_sequence # 其余域名使用可信 DNS
+      - exec: accept
+
+  - tag: udp_server
+    type: udp_server
+    args:
+      entry: main
+      listen: ":5335"
+
+  - tag: tcp_server
+    type: tcp_server
+    args:
+      entry: main
+      listen: ":5335"
+      # cert: "/etc/nginx/conf.d/_lan.crt" # 配置 cert 和 key 后会启用 TLS (DoT)。
+      # key: "/etc/nginx/conf.d/_lan.key" 
+      idle_timeout: 10 # 空连接超时。单位秒。默认 10。
+
+  - tag: "http_server"
+    type: "http_server"
+    args:
+      entries:
+        - path: /dns-query     # 本路径执行
+          exec: main # 可执行插件的 tag。
+      src_ip_header: "X-Forwarded-For"  # 从 HTTP 头获取用户 IP。
+      listen: :5443  # 监听地址。
+      # cert: "/etc/nginx/conf.d/_lan.crt" # 留空 cert 和 key 后会禁用 TLS。
+      # key: "/etc/nginx/conf.d/_lan.key" 
+      idle_timeout: 30 # 默认 30。
