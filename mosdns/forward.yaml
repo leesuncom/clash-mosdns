@@ -38,8 +38,10 @@ plugins:
     args:
       concurrent: 1
       upstreams:
-        - addr: "202.103.24.68" # 替换为你实际的运营商 DNS IP
-          enable_pipeline: true # UDP 管线化，提升效率
+        - addr: "https://doh.pub/dns-query"
+          dial_addr: "1.12.12.12"
+        - addr: "tls://dot.pub"
+          dial_addr: "120.53.53.53"
 
   # 2. 阿里云 DNS（优先使用，含 QUIC 高速协议）
   - tag: "forward_alidns"
