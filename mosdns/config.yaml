@@ -197,6 +197,7 @@ plugins:
     type: sequence
     args:
       - exec: $forward_local
+      - exec: jump has_resp_sequence
       - exec: jump change_cdn_ip_akamai
       - exec: jump change_cdn_ip
       - exec: accept
@@ -208,6 +209,7 @@ plugins:
       # 江苏电信如使用 alidns 请添加其他地区 ECS 否则易跳反诈
       # - exec: $ecs_shanghai
       - exec: $forward_alidns
+      - exec: jump has_resp_sequence
       - exec: jump change_cdn_ip_akamai
       - exec: jump change_cdn_ip
       - exec: accept
@@ -217,6 +219,7 @@ plugins:
     args:
       - exec: prefer_ipv4
       - exec: $forward_dnspod
+      - exec: jump has_resp_sequence
       - exec: jump change_cdn_ip_akamai
       - exec: jump change_cdn_ip
       - exec: accept
