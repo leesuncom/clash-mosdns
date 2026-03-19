@@ -1,61 +1,84 @@
 #!/bin/sh
-
+#
 # PROVIDE: clash
-# REQUIRE: NETWORKING
+# REQUIRE: NETWORKING SERVERS
 # KEYWORD: shutdown
 
 . /etc/rc.subr
 
 name="clash"
 rcvar=clash_enable
-log_file="/var/log/clash.log"
+pidfile="/var/run/${name}.pid"
+log_file="/var/log/${name}.log"
 
-command=/usr/sbin/daemon
-command_args="-P /var/run/clash.pid /usr/local/bin/clash -d /usr/local/etc/clash/ >>$log_file"
+# 你的Clash路径和配置目录（和WebUI完全对齐）
+clash_bin="/usr/local/bin/clash"
+clash_conf_dir="/usr/local/etc/clash"
 
-pidfile=/var/run/${name}.pid
+# 开机默认不自启
+clash_enable=${clash_enable:-"NO"}
 
-status_cmd=clash_status
+# 自定义启动/停止/状态命令
+start_cmd="my_clash_start"
+stop_cmd="my_clash_stop"
+status_cmd="my_clash_status"
 
+# 启动函数
+my_clash_start() {
+    echo "正在启动 Clash..."
 
+    # 清理残留进程和PID文件
+    rm -f "${pidfile}"
+    pkill -9 "${name}" >/dev/null 2>&1
+    sleep 1
 
-: ${clash_enable="NO"}
-
-log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> $log_file
-}
-
-clash_status()
-{
-    if [ -n "$rc_pid" ]; then
-        log_message "${name} is running as pid $rc_pid."
-        echo "${name} is running as pid $rc_pid."
+    # 后台启动Clash（和你手动执行的命令完全一致）
+    cd "${clash_conf_dir}" || exit 1
+    nohup "${clash_bin}" -d "${clash_conf_dir}" > "${log_file}" 2>&1 &
+    
+    # 记录进程PID
+    echo $! > "${pidfile}"
+    
+    # 验证启动结果
+    sleep 2
+    if [ -f "${pidfile}" ] && kill -0 $(cat "${pidfile}") 2>/dev/null; then
+        echo "✅ Clash 启动成功！PID: $(cat "${pidfile}")"
         return 0
     else
-        log_message "${name} is not running."
-        echo "${name} is not running."
+        echo "❌ Clash 启动失败，请查看日志: ${log_file}"
+        rm -f "${pidfile}"
+        return 1
     fi
 }
 
-start_clash()
-{
-    log_message "Starting ${name}..."
-    $command $command_args >> $log_file 2>&1 &
-    echo $! > /var/run/clash.pid
-    log_message "${name} started with pid $(cat /var/run/clash.pid)."
+# 停止函数
+my_clash_stop() {
+    echo "正在停止 Clash..."
+    if [ -f "${pidfile}" ]; then
+        kill -9 $(cat "${pidfile}") 2>/dev/null
+        rm -f "${pidfile}"
+    fi
+    pkill -9 "${name}" >/dev/null 2>&1
+    echo "✅ Clash 已停止。"
 }
 
-stop_clash()
-{
-    log_message "Stopping ${name}..."
-    if [ -f /var/run/clash.pid ]; then
-        kill $(cat /var/run/clash.pid)
-        rm -f /var/run/clash.pid
-        log_message "${name} stopped."
+# 状态检查函数
+my_clash_status() {
+    if [ -f "${pidfile}" ] && kill -0 $(cat "${pidfile}") 2>/dev/null; then
+        echo "✅ Clash 正在运行 (PID: $(cat "${pidfile}"))"
+        return 0
     else
-        log_message "No ${name} pid file found."
+        echo "❌ Clash 未运行"
+        return 1
     fi
 }
 
-load_rc_config clash
-run_rc_command $1
+# 加载系统配置
+load_rc_config $name
+
+# 【关键修复】强制允许手动执行start命令，不影响开机不自启
+# 开机时系统只有clash_enable=YES才会调用本脚本，因此这里强制设为YES仅影响手动执行
+clash_enable="YES"
+
+# 执行命令
+run_rc_command "$1"
