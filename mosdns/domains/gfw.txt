@@ -75,6 +75,7 @@
 a-normal-day.com
 a248.e.akamai.net
 aamacau.com
+aave.com
 abc.net.au
 abc.xyz
 abebooks.co.uk
@@ -133,6 +134,7 @@ akamai.tvb.com
 akamaihd.net
 akiba-online.com
 akiba-web.com
+akile.io
 akinator.com
 akow.org
 alabout.com
@@ -247,12 +249,14 @@ archiveofourown.org
 archives.gov
 arctosia.com
 areca-backup.org
+arena.ai
 arena.taipei
 arethusa.su
 arlingtoncemetery.mil
 arte.tv
 artstation.com
 arvanstorage.ir
+arweave.org
 asacp.org
 asiaharvest.org
 asianage.com
@@ -267,6 +271,7 @@ aspi.org.au
 aspistrategist.org.au
 assembla.com
 assets.bwbx.io
+assets.nxtrace.org
 assimp.org
 astrill.com
 atc.org.au
@@ -755,6 +760,7 @@ cixiaoya.club
 ck101.com
 classicalguitarblog.net
 claude.ai
+claude.com
 cldr.unicode.org
 clearsurance.com
 clementine-player.org
@@ -970,6 +976,7 @@ dmc.nico
 dmcdn.net
 dmhy.org
 dmm.co.jp
+dns.cloudflare.com
 dns2go.com
 dnscrypt.org
 dnssec.net
@@ -998,6 +1005,7 @@ douchi.space
 dougscripts.com
 doujincafe.com
 download.aircrack-ng.org
+download.dappcdn.com
 dpool.top
 dpp.org.tw
 dpr.info
@@ -1049,6 +1057,7 @@ ebook.hyread.com.tw
 ebtcbank.com
 ecfa.org.tw
 ecimg.tw
+economist.com
 edgecastcdn.net
 edubridge.com
 edx-cdn.org
@@ -1259,6 +1268,7 @@ free.com.tw
 freebeacon.com
 freebrowser.org
 freechinaweibo.com
+freedom.gov
 freedomhouse.org
 freedominfonetweb.wordpress.com
 freedomsherald.org
@@ -1554,6 +1564,7 @@ google.com.vn
 google.cv
 google.cz
 google.de
+google.dev
 google.dj
 google.dk
 google.dm
@@ -1969,6 +1980,7 @@ internetpopculture.com
 interseclab.org
 inthenameofconfuciusmovie.com
 investigating.wordpress.com
+investing.com
 invidio.us
 inxian.com
 ipdefenseforum.com
@@ -2258,6 +2270,7 @@ mangafox.com
 mangafox.me
 mangmang.run
 manta.com
+manus.im
 manyvoices.news
 marc.info
 martau.com
@@ -2292,6 +2305,7 @@ mediachinese.com
 mediafreakcity.com
 mediawiki.org
 medium.com
+meee.com.tw
 meetup.com
 mega.co.nz
 mega.io
@@ -2626,6 +2640,7 @@ ooni.io
 ooni.org
 open.firstory.me
 openai.com
+opencritic.com
 opendemocracy.net
 openid.net
 openleaks.org
@@ -3082,6 +3097,7 @@ shenyunshop.com
 shenzhoufilm.com
 shenzhouzhengdao.org
 shiksha.com
+shitjournal.org
 shixiao.org
 shizhao.org
 shodanhq.com
@@ -3501,6 +3517,7 @@ toppornsites.com
 topsy.com
 toptip.ca
 toptoon.net
+tor.eff.org
 torguard.net
 torlock.com
 torproject.org
@@ -3655,6 +3672,7 @@ uncyclopedia.tw
 underwoodammo.com
 unholyknight.com
 unirule.cloud
+uniswap.org
 unknownspace.org
 unmineable.com
 unseen.is
@@ -3917,6 +3935,7 @@ wiredbytes.com
 wiredpen.com
 wireguard.com
 wisevid.com
+wispbyte.com
 withgoogle.com
 withyoutube.com
 witopia.net
@@ -3961,6 +3980,7 @@ www.ajsands.com
 www.antd.org
 www.aolnews.com
 www.bing.com
+www.clashverge.dev
 www.cmoinc.org
 www.dmm.com
 www.eastturkistan.net
@@ -3969,7 +3989,6 @@ www.gmiddle.net
 www.hoyolab.com
 www.hustlercash.com
 www.idlcoyote.com
-www.imdb.com
 www.kindleren.com
 www.lorenzetti.com.br
 www.m-sport.co.uk
@@ -4003,6 +4022,7 @@ xbtce.com
 xcafe.in
 xcancel.com
 xcity.jp
+xdaforums.com
 xerotica.com
 xfinity.com
 xfxssr.me
@@ -4128,7 +4148,6 @@ z-library.ec
 z-library.sk
 zalmos.com
 zamimg.com
-zaobao.com.sg
 zaochenbao.com
 zattoo.com
 zb.com
