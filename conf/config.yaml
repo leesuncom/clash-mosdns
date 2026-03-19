@@ -2,9 +2,8 @@ port: 7890
 socks-port: 7891
 mode: rule
 log-level: error
-external-controller: '0.0.0.0:9090'
+external-controller: 0.0.0.0:9090
 external-ui: /usr/local/etc/clash/ui
-secret: 123456
 tun:
   enable: true
   stack: system
@@ -19,70 +18,42 @@ tun:
 dns:
   enable: true
   listen: 0.0.0.0:53
-  default-nameserver: 
-    - 127.0.0.1:5335 # 指向mosdns
+  enhanced-mode: fake-ip
+  default-nameserver:
+    - 127.0.0.1:5335
+  nameserver:
+    - 127.0.0.1:5335
+  fallback: []
 proxies:
-  - {name: HK_1|1.1MB/s, server: 203.198.123.162, port: 443, type: trojan, password: BxceQaOe, sni: t.me%2Fripaojiedian, skip-cert-verify: true, udp: true}
-  - {name: SG_1|1.3MB/s, server: 68.183.227.4, port: 8080, type: ss, cipher: rc4-md5, password: 14fFPrbezE3HDZzsMOr6, udp: true}
-  - {name: PL_1|1.1MB/s, server: 51.15.23.63, port: 989, type: ss, cipher: aes-256-cfb, password: f8f7aCzcPKbsF8p3, udp: true}
-  - {name: US_1|1.6MB/s, server: 82.198.246.97, port: 180, type: vmess, uuid: d13fc2f5-3e05-4795-81eb-44143a09e552, alterId: 0, cipher: auto, tls: false, skip-cert-verify: false, udp: true}
-  - {name: US_2|1.1MB/s, server: mkouy.99890604.xyz, port: 443, type: trojan, password: 5196aae7-1479-4f3c-978b-68e74977b509, sni: mkouy.99890604.xyz, skip-cert-verify: false, network: ws, ws-opts: {path: "%2FmSZVb4DmOGWZIKMBivnR3", headers: {Host: mkouy.99890604.xyz}}, udp: true}
-  - {name: US_3|1.6MB/s, server: gbnh.7777112.xyz, port: 443, type: trojan, password: 2bfe58f7-da1d-45df-ab43-7c665b20ee29, sni: gbnh.7777112.xyz, skip-cert-verify: false, network: ws, ws-opts: {path: "%2F2cO5FH0xUmT9oqnbBhmKb8nOkg", headers: {Host: gbnh.7777112.xyz}}, udp: true}
-  - {name: SG_2|1.6MB/s, server: 103.36.91.32, port: 8388, type: ss, cipher: chacha20-ietf, password: asd123456, udp: true}
-  - {name: VN_1|1014KB/s, server: 103.186.155.131, port: 38388, type: ss, cipher: aes-256-cfb, password: Xn8jKdmDM00IeO%#$#fJAMtsEAEUOpH/YWYtYqDFnT0SV, udp: true}
-  - {name: FR_1|2.0MB/s, server: 188.114.98.0, port: 8080, type: vmess, uuid: nasnet, alterId: 0, cipher: auto, tls: false, skip-cert-verify: false, network: ws, ws-opts: {path: "/nasnet/cdn?ed=2560/?TELEGRAM--KANAL--JKVPN--JKVPN--JKVPN--JKVPN--JKVPN--JKVPN", headers: {Host: nasnet-162191099.sharghdaily.co}}, udp: true}
-  - {name: DE_3|2.4MB/s, server: digitalocean.com, port: 8080, type: vmess, uuid: nasnet, alterId: 0, cipher: auto, tls: false, skip-cert-verify: false, network: ws, ws-opts: {path: /NASNET/cdn, headers: {Host: nasnet-571299667.rahavard365.co}}, udp: true}
-  - {name: FR_2|2.4MB/s, server: tgju.org, port: 8080, type: vmess, uuid: nasnet, alterId: 0, cipher: auto, tls: false, skip-cert-verify: false, network: ws, ws-opts: {path: /nasnet/cdn, headers: {Host: nasnet-162191099.sharghdaily.co}}, udp: true}
+  - {name: JP_2|2.5MB/s, server: cf.877774.xyz, port: 443, type: ss, cipher: none, password: 3e96ef7d-8637-42c2-ac73-75182196e755, plugin: v2ray-plugin, plugin-opts: {mode: websocket, host: mfvpn.fuchen.indevs.in, path: "/3e96ef7d-8637-42c2-ac73-75182196e755/?ed=2560", tls: true, mux: false}, udp: true}
+  - {name: MY_1|1.3MB/s, server: ddnn2.whtjdasha.com, port: 33339, type: ss, cipher: chacha20-ietf-poly1305, password: b02b9065-defa-495a-bef1-cd55c67dbdf6, udp: true}
+  - {name: NL_1|1.1MB/s, server: apt-magpie.rooster465.autos, port: 443, type: trojan, password: IL37892054, skip-cert-verify: false, udp: true}
 proxy-groups:
   - name: 🔰 节点选择
     type: select
     proxies:
       - ♻️ 自动选择
       - 🎯 全球直连
-      - HK_1|1.1MB/s
-      - SG_1|1.3MB/s
-      - PL_1|1.1MB/s
-      - US_1|1.6MB/s
-      - US_2|1.1MB/s
-      - US_3|1.6MB/s
-      - SG_2|1.6MB/s
-      - VN_1|1014KB/s
-      - FR_1|2.0MB/s
-      - DE_3|2.4MB/s
-      - FR_2|2.4MB/s
+      - JP_2|2.5MB/s
+      - MY_1|1.3MB/s
+      - NL_1|1.1MB/s
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
     interval: 300
     proxies:
-      - HK_1|1.1MB/s
-      - SG_1|1.3MB/s
-      - PL_1|1.1MB/s
-      - US_1|1.6MB/s
-      - US_2|1.1MB/s
-      - US_3|1.6MB/s
-      - SG_2|1.6MB/s
-      - VN_1|1014KB/s
-      - FR_1|2.0MB/s
-      - DE_3|2.4MB/s
-      - FR_2|2.4MB/s
+      - JP_2|2.5MB/s
+      - MY_1|1.3MB/s
+      - NL_1|1.1MB/s
   - name: 🎥 NETFLIX
     type: select
     proxies:
       - 🔰 节点选择
       - ♻️ 自动选择
       - 🎯 全球直连
-      - HK_1|1.1MB/s
-      - SG_1|1.3MB/s
-      - PL_1|1.1MB/s
-      - US_1|1.6MB/s
-      - US_2|1.1MB/s
-      - US_3|1.6MB/s
-      - SG_2|1.6MB/s
-      - VN_1|1014KB/s
-      - FR_1|2.0MB/s
-      - DE_3|2.4MB/s
-      - FR_2|2.4MB/s
+      - JP_2|2.5MB/s
+      - MY_1|1.3MB/s
+      - NL_1|1.1MB/s
   - name: ⛔️ 广告拦截
     type: select
     proxies:
@@ -101,17 +72,9 @@ proxy-groups:
       - 🔰 节点选择
       - ♻️ 自动选择
       - 🎯 全球直连
-      - HK_1|1.1MB/s
-      - SG_1|1.3MB/s
-      - PL_1|1.1MB/s
-      - US_1|1.6MB/s
-      - US_2|1.1MB/s
-      - US_3|1.6MB/s
-      - SG_2|1.6MB/s
-      - VN_1|1014KB/s
-      - FR_1|2.0MB/s
-      - DE_3|2.4MB/s
-      - FR_2|2.4MB/s
+      - JP_2|2.5MB/s
+      - MY_1|1.3MB/s
+      - NL_1|1.1MB/s
   - name: 🌏 国内媒体
     type: select
     proxies:
@@ -122,50 +85,26 @@ proxy-groups:
     proxies:
       - 🎯 全球直连
       - 🔰 节点选择
-      - HK_1|1.1MB/s
-      - SG_1|1.3MB/s
-      - PL_1|1.1MB/s
-      - US_1|1.6MB/s
-      - US_2|1.1MB/s
-      - US_3|1.6MB/s
-      - SG_2|1.6MB/s
-      - VN_1|1014KB/s
-      - FR_1|2.0MB/s
-      - DE_3|2.4MB/s
-      - FR_2|2.4MB/s
+      - JP_2|2.5MB/s
+      - MY_1|1.3MB/s
+      - NL_1|1.1MB/s
   - name: 📲 电报信息
     type: select
     proxies:
       - 🔰 节点选择
       - 🎯 全球直连
-      - HK_1|1.1MB/s
-      - SG_1|1.3MB/s
-      - PL_1|1.1MB/s
-      - US_1|1.6MB/s
-      - US_2|1.1MB/s
-      - US_3|1.6MB/s
-      - SG_2|1.6MB/s
-      - VN_1|1014KB/s
-      - FR_1|2.0MB/s
-      - DE_3|2.4MB/s
-      - FR_2|2.4MB/s
+      - JP_2|2.5MB/s
+      - MY_1|1.3MB/s
+      - NL_1|1.1MB/s
   - name: 🍎 苹果服务
     type: select
     proxies:
       - 🔰 节点选择
       - 🎯 全球直连
       - ♻️ 自动选择
-      - HK_1|1.1MB/s
-      - SG_1|1.3MB/s
-      - PL_1|1.1MB/s
-      - US_1|1.6MB/s
-      - US_2|1.1MB/s
-      - US_3|1.6MB/s
-      - SG_2|1.6MB/s
-      - VN_1|1014KB/s
-      - FR_1|2.0MB/s
-      - DE_3|2.4MB/s
-      - FR_2|2.4MB/s
+      - JP_2|2.5MB/s
+      - MY_1|1.3MB/s
+      - NL_1|1.1MB/s
   - name: 🎯 全球直连
     type: select
     proxies:
@@ -181,17 +120,9 @@ proxy-groups:
       - 🔰 节点选择
       - 🎯 全球直连
       - ♻️ 自动选择
-      - HK_1|1.1MB/s
-      - SG_1|1.3MB/s
-      - PL_1|1.1MB/s
-      - US_1|1.6MB/s
-      - US_2|1.1MB/s
-      - US_3|1.6MB/s
-      - SG_2|1.6MB/s
-      - VN_1|1014KB/s
-      - FR_1|2.0MB/s
-      - DE_3|2.4MB/s
-      - FR_2|2.4MB/s
+      - JP_2|2.5MB/s
+      - MY_1|1.3MB/s
+      - NL_1|1.1MB/s
 rules:
   - DOMAIN-SUFFIX,local,🎯 全球直连
   - IP-CIDR,192.168.0.0/16,🎯 全球直连,no-resolve
