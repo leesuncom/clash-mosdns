@@ -6,43 +6,86 @@
 
 . /etc/rc.subr
 
+# 核心配置（适配OPNsense）
 name="clash"
 rcvar=clash_enable
 pidfile="/var/run/${name}.pid"
 log_file="/var/log/${name}.log"
-
-# 你的Clash路径和配置目录（和WebUI完全对齐）
 clash_bin="/usr/local/bin/clash"
 clash_conf_dir="/usr/local/etc/clash"
+# 自定义TUN设备名（和你的Clash config.yaml中保持一致，若未设置则注释）
+tun_device="tun_3000"
 
 # 开机默认不自启
 clash_enable=${clash_enable:-"NO"}
 
-# 自定义启动/停止/状态命令
+# 自定义命令映射
 start_cmd="my_clash_start"
 stop_cmd="my_clash_stop"
 status_cmd="my_clash_status"
+restart_cmd="my_clash_restart"  # 新增重启命令，整合停止+清理+启动
 
-# 启动函数
+# ===================== 核心函数：清理残留资源（解决TUN报错）=====================
+clean_residual() {
+    echo "🔍 清理Clash残留资源..."
+    
+    # 1. 清理残留PID文件
+    if [ -f "${pidfile}" ]; then
+        rm -f "${pidfile}"
+        echo "✅ 已删除残留PID文件: ${pidfile}"
+    fi
+
+    # 2. 清理残留Clash进程
+    if pgrep -x "${name}" >/dev/null; then
+        pkill -9 "${name}" >/dev/null 2>&1
+        sleep 1
+        echo "✅ 已杀死残留Clash进程"
+    fi
+
+    # 3. 清理残留TUN设备（核心！解决file exists错误）
+    if [ -n "${tun_device}" ] && ifconfig | grep -q "${tun_device}"; then
+        ifconfig "${tun_device}" destroy >/dev/null 2>&1
+        sleep 1
+        echo "✅ 已删除残留TUN设备: ${tun_device}"
+    fi
+}
+
+# ===================== 启动函数（优化容错+精准PID）=====================
 my_clash_start() {
-    echo "正在启动 Clash..."
+    # 前置检查
+    if [ ! -x "${clash_bin}" ]; then
+        echo "❌ 错误：Clash可执行文件不存在或无执行权限: ${clash_bin}"
+        return 1
+    fi
+    if [ ! -d "${clash_conf_dir}" ]; then
+        echo "❌ 错误：Clash配置目录不存在: ${clash_conf_dir}"
+        return 1
+    fi
 
-    # 清理残留进程和PID文件
-    rm -f "${pidfile}"
-    pkill -9 "${name}" >/dev/null 2>&1
-    sleep 1
+    # 清理残留资源
+    clean_residual
 
-    # 后台启动Clash（和你手动执行的命令完全一致）
-    cd "${clash_conf_dir}" || exit 1
-    nohup "${clash_bin}" -d "${clash_conf_dir}" > "${log_file}" 2>&1 &
-    
-    # 记录进程PID
-    echo $! > "${pidfile}"
-    
-    # 验证启动结果
-    sleep 2
+    echo "🚀 正在启动 Clash..."
+    # 确保日志文件可写（OPNsense默认root权限）
+    touch "${log_file}"
+    chmod 644 "${log_file}"
+
+    # 启动Clash（优化PID记录，避免nohup干扰）
+    cd "${clash_conf_dir}" || return 1
+    ${clash_bin} -d "${clash_conf_dir}" > "${log_file}" 2>&1 &
+    clash_pid=$!
+    echo "${clash_pid}" > "${pidfile}"
+
+    # 验证启动结果（延长等待时间，适配TUN设备创建）
+    sleep 3
     if [ -f "${pidfile}" ] && kill -0 $(cat "${pidfile}") 2>/dev/null; then
-        echo "✅ Clash 启动成功！PID: $(cat "${pidfile}")"
+        echo "✅ Clash 启动成功！PID: ${clash_pid}"
+        # 验证7853端口监听（DNS核心端口）
+        if sockstat -4 -l | grep -q "7853"; then
+            echo "✅ Clash DNS端口 7853 已监听"
+        else
+            echo "⚠️ Clash 启动成功，但7853端口未监听，请检查config.yaml的DNS配置"
+        fi
         return 0
     else
         echo "❌ Clash 启动失败，请查看日志: ${log_file}"
@@ -51,21 +94,42 @@ my_clash_start() {
     fi
 }
 
-# 停止函数
+# ===================== 停止函数（完整清理）=====================
 my_clash_stop() {
-    echo "正在停止 Clash..."
+    echo "🛑 正在停止 Clash..."
+    # 停止进程
     if [ -f "${pidfile}" ]; then
         kill -9 $(cat "${pidfile}") 2>/dev/null
         rm -f "${pidfile}"
     fi
     pkill -9 "${name}" >/dev/null 2>&1
-    echo "✅ Clash 已停止。"
+
+    # 清理TUN设备
+    if [ -n "${tun_device}" ] && ifconfig | grep -q "${tun_device}"; then
+        ifconfig "${tun_device}" destroy >/dev/null 2>&1
+        echo "✅ 已清理TUN设备: ${tun_device}"
+    fi
+
+    echo "✅ Clash 已完全停止"
 }
 
-# 状态检查函数
+# ===================== 重启函数（新增）=====================
+my_clash_restart() {
+    my_clash_stop
+    sleep 2
+    my_clash_start
+}
+
+# ===================== 状态检查函数（优化）=====================
 my_clash_status() {
     if [ -f "${pidfile}" ] && kill -0 $(cat "${pidfile}") 2>/dev/null; then
         echo "✅ Clash 正在运行 (PID: $(cat "${pidfile}"))"
+        # 额外检查7853端口状态
+        if sockstat -4 -l | grep -q "7853"; then
+            echo "✅ DNS端口 7853 监听正常"
+        else
+            echo "⚠️ DNS端口 7853 未监听，请检查配置"
+        fi
         return 0
     else
         echo "❌ Clash 未运行"
@@ -76,8 +140,7 @@ my_clash_status() {
 # 加载系统配置
 load_rc_config $name
 
-# 【关键修复】强制允许手动执行start命令，不影响开机不自启
-# 开机时系统只有clash_enable=YES才会调用本脚本，因此这里强制设为YES仅影响手动执行
+# 强制允许手动执行（不影响开机自启逻辑）
 clash_enable="YES"
 
 # 执行命令
