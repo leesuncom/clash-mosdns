@@ -5,7 +5,6 @@ full:api.c99.ai
 full:api.dev.c99.ai
 full:api.stage.c99.ai
 full:api.channel99.com
-full:bbs.hostevaluate.com
 full:bbs.kfmax.com
 full:c.adventurerv.net
 full:c.mi.com
@@ -23,6 +22,8 @@ full:claim.fluence.network
 full:download.dappcdn.com
 full:download.fosshub.com
 full:downloads.pdf-xchange.com
+full:dsp-cdn.gammaplatform.com
+full:ecdn.codemasters.com
 full:events.mapbox.com
 full:fonts.sony.net
 full:gal.voiux.com
@@ -85,6 +86,7 @@ crwdcntrl.net
 cutecloud.net
 cutout.pro
 dashlane.com
+defibit.io
 dicmusic.club
 domain.glass
 edgecastcdn.net
@@ -92,6 +94,7 @@ fanbox.cc
 filezillapro.com
 flhj.club
 freetls.fastly.net
+futuhk.com
 gal123.com
 global.ssl.fastly.net
 gmpg.org
@@ -107,6 +110,7 @@ ipfs.cf-ipfs.com
 iwara.tv
 kaguragames.com
 kemono.party
+keyfc.net
 krypt.com
 ktcom.jp
 kuaichedao.co
@@ -121,6 +125,7 @@ metamask.io
 miel-soft.com
 momoshop.com.tw
 mrcong.com
+news24.com
 nexitallysafe.com
 nudogram.com
 onekey.so
@@ -130,6 +135,7 @@ pixiv.cat
 pixiv.org
 pornpics.com
 pubnative.net
+raydium.io
 rule34video.com
 serveteck.com
 setupvpn.com
@@ -148,11 +154,13 @@ tycqzw.net
 uplynk.com
 utorrent.com
 vikacg.com
+visualstudio.icu
 vps000.com
 wlvpn.com
 xbiquge99.cc
 zgo.at
 regexp:^(.+\.)?mikuclub\..+$
+regexp:^(.+\.)?reuters\.tv$
 regexp:^(.+\.)?xg(mn|yw)\d*\..+$
 keyword:18comic
 keyword:18-comic

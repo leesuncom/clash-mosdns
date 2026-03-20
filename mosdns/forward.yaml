@@ -12,7 +12,7 @@ plugins:
     type: ecs_handler
     args:
       forward: false
-      preset: 151.101.48.0
+      preset: 151.101.196.0
       send: false
       mask4: 22
 
@@ -63,7 +63,7 @@ plugins:
   - tag: forward_remote
     type: forward
     args:
-      concurrent: 1
+      concurrent: 2
       upstreams:
         - addr: "tls://1.1.1.1:853" # Cloudflare DoT（补充标准端口 853）
           dial_addr: "1.1.1.1"

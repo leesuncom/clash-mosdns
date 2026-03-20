@@ -23,6 +23,7 @@ bntrace.com
 book4you.org
 bookwalker.com.tw
 bookwalker.jp
+browser-intake-ap1-datadoghq.com
 buzzfeed.com
 bybitglobal.com
 byhkbit.com
@@ -31,6 +32,7 @@ caddyserver.com
 carousell.com.hk
 celer.network
 ch-werner.de
+chinaaction.org
 cia.gov
 clockwise.ee
 coinbase.com
@@ -43,9 +45,11 @@ cospuri.com
 coti.io
 credit.org
 cryptocompare.com
+cults3d.com
 cxense.com
 dala8.xyz
 dextools.io
+dgithub.xyz
 docker.com
 docker.io
 dns.sb
@@ -66,6 +70,7 @@ formyip.com
 freevpnnet.com
 fril.jp
 gamerant.com
+gamma.app
 gdax.com
 gemini.com
 gfycat.com
@@ -80,8 +85,11 @@ hostloc.net
 hostmonit.com
 infura.io
 inkl.com
+interactivebrokers.com.hk
 iwanlab.com
+jkforum.net
 jkv.app
+jup.ag
 jwplayer.com
 kgithub.com
 lemmy.ml
@@ -103,6 +111,7 @@ mexc.com
 mikanani.me
 miobt.com
 moengage.com
+mouser.tw
 musixmatch.com
 myunidays.com
 myvideo.net.tw
@@ -121,7 +130,9 @@ okcoin.com
 onlyfans.com
 openairinterface.org
 osl.com
+ourdream.ai
 outlookindia.com
+pancakeswap.info
 patreonusercontent.com
 perchance.org
 pexpay.com
@@ -129,6 +140,7 @@ picsart.com
 pilipili.cc
 pilipili.cm
 pndsn.com
+politicalcompass.org
 qbittorrent.org
 qobuz.com
 qooapp.net
@@ -145,6 +157,7 @@ scribdassets.com
 simplex.chat
 sina.com.hk
 sleazyfork.org
+softonic.cn
 soundon.fm
 ssrtool.us
 starlark.net
@@ -178,6 +191,8 @@ uniswap.org
 unwire.hk
 uscardforum.com
 uscnpm.com
+v2ph.com
+vuze.com
 walletconnect.com
 wa.me
 wikiquote.org
@@ -192,7 +207,10 @@ yodobashi.com
 
 anond.hatelabo.jp
 api.ipify.org
+bbs.hostevaluate.com
 d.hatena.ne.jp
+dmhy.anoneko.com
+en.softonic.com
 gamefaqs.gamespot.com
 images.prismic.io
 json2.dcinside.com
