@@ -1,22 +1,57 @@
+# 基础代理端口配置
 port: 7890
 socks-port: 7891
 mode: rule
 log-level: error
 external-controller: '0.0.0.0:9090'
 external-ui: /usr/local/etc/clash/ui
+
+# TUN模式配置（网关核心）
 tun:
   enable: true
   stack: system
   device: tun_3000
-  mtu: 9000
-  auto-route: true
-  strict-route: true
+  mtu: 1500 
+  auto-route: true   
+  strict-route: true 
   auto-detect-interface: true
   dns-hijack:
-    - any:53
+    - any:53 
     - tcp://any:53
+route-addr: 0.0.0.0/0
+
+# DNS配置（核心修复：避开53端口）
 dns:
   enable: true
-  listen: 0.0.0.0:53
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.0/16
+  listen: 0.0.0.0:7853 
   nameserver: 
-    - 127.0.0.1:5335 # 指向mosdns
+    - 127.0.0.1:5335
+
+# 流量嗅探
+sniffer:
+  enable: true
+  sniff:
+    HTTP:
+      ports: [80, 8080, 8443, 8880]
+      override-destination: true
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443, 8443]
+  skip-domain:
+    - "+.push.apple.com"
+    - "+.apple.com" 
+    - "+.icloud.com"
+    - "+.microsoft.com"
+
+# （可选）添加规则集（如果需要）
+# rule-providers:
+#   reject:
+#     type: http
+#     url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+#     path: ./rules/reject.yaml
+#     interval: 86400
+
+
