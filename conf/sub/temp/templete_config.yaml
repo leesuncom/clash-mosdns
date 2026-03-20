@@ -18,7 +18,7 @@ tun:
   dns-hijack:
     - any:53 
     - tcp://any:53
-route-addr: 0.0.0.0/0
+  route-addr: 0.0.0.0/0
 
 # DNS配置（核心修复：避开53端口）
 dns:
