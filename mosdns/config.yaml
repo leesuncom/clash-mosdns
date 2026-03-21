@@ -1,3 +1,5 @@
+# 更新脚本增强：在之前优化过的脚本中增加下载优选 IP 列表的步骤，例如从 https://github.com/Journalist-HK/Rules 或自定义源获取最新 IP。https://raw.githubusercontent.com/Teacher-c/clash/main/data/Akamai_ipv4.txt
+
 log:
   level: debug
   file: "/var/log/mosdns.log"
@@ -11,13 +13,13 @@ include:
 
 plugins:
   # IP 优选，需要定期修改，最好填写 2-4 个
-  - tag: blackhole_akamai_ipv4 # 替换部分 AKAMAI 域名 IP，详见 https://github.com/IrineSistiana/mosdns/discussions/489
+  - tag: blackhole_akamai_ipv4 # 替换部分 AKAMAI 域名 IP，详见 https://raw.githubusercontent.com/Teacher-c/clash/main/data/Akamai_ipv4.txt
     type: sequence
     args:
       - exec: black_hole 104.84.150.173 104.84.150.180 23.200.143.19 # best_akamai_ipv4
       - exec: ttl 3600-0
-      - exec: accept # 运行 black_hole 之后接受请求，不再进行后续判断
-# 更新脚本增强：在之前优化过的脚本中增加下载优选 IP 列表的步骤，例如从 https://github.com/Journalist-HK/Rules 或自定义源获取最新 IP。
+      - exec: accept
+
   - tag: blackhole_akamai_ipv6
     type: sequence
     args:
@@ -93,6 +95,11 @@ plugins:
     args:
       - matches:
           - cname akamai.net akamaized.net
+          - qtype 1
+          - has_wanted_ans # 防止纯 IPV6 域名被替换
+        exec: jump blackhole_akamai_ipv4
+      - matches:
+          - resp_ip $akamai_ipv4
           - qtype 1
           - has_wanted_ans # 防止纯 IPV6 域名被替换
         exec: jump blackhole_akamai_ipv4
@@ -173,10 +180,14 @@ plugins:
   - tag: default_sequence # 默认使用 fallback
     type: sequence
     args:
+      - exec: prefer_ipv4  # 优先返回IPv4（和你现有序列保持一致）
       - exec: jump remote_sequence
       - exec: jump change_cdn_ip_akamai
       - exec: jump change_cdn_ip
-      - exec: accept
+      - matches:
+          - has_resp       # 有解析结果就直接接受
+        exec: accept
+      - exec: return       # 无结果则返回（兜底）
 
   - tag: default_sequence_original # 使用 fallback，不替换 CDN IP
     type: sequence
@@ -320,6 +331,10 @@ plugins:
 
       # 策略 1：默认查询国内上游，入返回境外 IP，再次将域名交给可信 DNS 查询。
       # 策略 2：注释上方策略 1 的配置，默认查询可信 DNS，可以避免“DNS 泄露”，对上游稳定性要求更高
+      - matches:
+          - resp_ip $banned_ip # 记录被污染域名，日后加入 gerylist。
+        exec: jump banned_sequence   
+      - exec: jump change_cdn_ip        
       - exec: jump default_sequence # 其余域名使用可信 DNS
       - exec: accept
 

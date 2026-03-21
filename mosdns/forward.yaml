@@ -30,9 +30,9 @@ plugins:
     args:
       concurrent: 1
       upstreams:
-        - addr: "https://doh.pub/dns-query" # 标准 DoH 格式
+        - addr: "https://doh.pub/dns-query"
           dial_addr: "1.12.12.12"
-        - addr: "tls://dot.pub:853" # 标准 DoT 格式（补充端口 853）
+        - addr: "tls://dot.pub:853"
           dial_addr: "120.53.53.53"
 
   - tag: forward_alidns
@@ -63,7 +63,7 @@ plugins:
       upstreams:
         - addr: "udp://127.0.0.1:7853"
           enable_pipeline: true
-        - addr: "udp://127.0.0.1:5353" # 本地代理 DNS 兜底
+        - addr: "udp://127.0.0.1:5353"
           enable_pipeline: true
         - addr: "tls://1.1.1.1:853"
           dial_addr: "1.1.1.1"
@@ -71,7 +71,7 @@ plugins:
           dial_addr: "1.0.0.1"
           enable_http3: true
 
-   # ===================== 解析序列（修复语法错误）=====================
+  # ===================== 解析序列（修复原有缩进/语法错误）=====================
   # 国内域名解析序列
   - tag: domestic_sequence
     type: sequence
@@ -79,8 +79,8 @@ plugins:
       - exec: prefer_ipv4
       - exec: $forward_local
       - exec: $forward_alidns
-      - exec: $forward_dnspod # 国内域名走dnspod
-      - exec: accept # 有结果直接返回
+      - exec: $forward_dnspod
+      - exec: accept
 
   # 境外域名 IPv4 解析序列
   - tag: remote_sequence
