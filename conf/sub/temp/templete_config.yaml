@@ -31,7 +31,10 @@ dns:
   use-hosts: true
   use-system-hosts: true
   # listen: 0.0.0.0:53
+  listen: 0.0.0.0:7853
   respect-rules: false
+  default-nameserver:
+    - 127.0.0.1:5335 
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.0/15
   fake-ip-filter-mode: whitelist
