@@ -2,7 +2,7 @@ port: 7890
 socks-port: 7891
 mode: rule
 log-level: error
-external-controller: 0.0.0.0:9090
+external-controller: '0.0.0.0:9090'
 external-ui: /usr/local/etc/clash/ui
 secret: 123456
 tun:
@@ -19,51 +19,30 @@ tun:
 dns:
   enable: true
   listen: 0.0.0.0:53
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  default-nameserver:
-    - 127.0.0.1:5335
-  nameserver:
-    - 8.8.8.8
-    - 8.8.4.4
-  fallback: []
-  fake-ip-filter:
-    - '+.lan'
-    - '+.local'
-    - '+.internal'
-    - '127.*'
-    - '192.168.*'
-    - '10.*'
+  default-nameserver: 
+    - 127.0.0.1:5335 # 指向mosdns
 proxies:
-  - {name: JP_2|2.5MB/s, server: cf.877774.xyz, port: 443, type: ss, cipher: none, password: 3e96ef7d-8637-42c2-ac73-75182196e755, plugin: v2ray-plugin, plugin-opts: {mode: websocket, host: mfvpn.fuchen.indevs.in, path: "/3e96ef7d-8637-42c2-ac73-75182196e755/?ed=2560", tls: true, mux: false}, udp: true}
-  - {name: MY_1|1.3MB/s, server: ddnn2.whtjdasha.com, port: 33339, type: ss, cipher: chacha20-ietf-poly1305, password: b02b9065-defa-495a-bef1-cd55c67dbdf6, udp: true}
-  - {name: NL_1|1.1MB/s, server: apt-magpie.rooster465.autos, port: 443, type: trojan, password: IL37892054, skip-cert-verify: false, udp: true}
+  - {name: US_2|1.8MB/s, server: 208.87.243.151, port: 38845, type: hysteria, protocol: udp, up: 11 Mbps, up-speed: 2759498976, down: 55 Mbps, down-speed: 6, auth-str: dongtaiwang.com, auth: ZG9uZ3RhaXdhbmcuY29t, sni: www.bing.com, skip-cert-verify: true, alpn: [h3], udp: true}
 proxy-groups:
   - name: 🔰 节点选择
     type: select
     proxies:
       - ♻️ 自动选择
       - 🎯 全球直连
-      - JP_2|2.5MB/s
-      - MY_1|1.3MB/s
-      - NL_1|1.1MB/s
+      - US_2|1.8MB/s
   - name: ♻️ 自动选择
     type: url-test
     url: http://www.gstatic.com/generate_204
     interval: 300
     proxies:
-      - JP_2|2.5MB/s
-      - MY_1|1.3MB/s
-      - NL_1|1.1MB/s
+      - US_2|1.8MB/s
   - name: 🎥 NETFLIX
     type: select
     proxies:
       - 🔰 节点选择
       - ♻️ 自动选择
       - 🎯 全球直连
-      - JP_2|2.5MB/s
-      - MY_1|1.3MB/s
-      - NL_1|1.1MB/s
+      - US_2|1.8MB/s
   - name: ⛔️ 广告拦截
     type: select
     proxies:
@@ -82,9 +61,7 @@ proxy-groups:
       - 🔰 节点选择
       - ♻️ 自动选择
       - 🎯 全球直连
-      - JP_2|2.5MB/s
-      - MY_1|1.3MB/s
-      - NL_1|1.1MB/s
+      - US_2|1.8MB/s
   - name: 🌏 国内媒体
     type: select
     proxies:
@@ -95,26 +72,20 @@ proxy-groups:
     proxies:
       - 🎯 全球直连
       - 🔰 节点选择
-      - JP_2|2.5MB/s
-      - MY_1|1.3MB/s
-      - NL_1|1.1MB/s
+      - US_2|1.8MB/s
   - name: 📲 电报信息
     type: select
     proxies:
       - 🔰 节点选择
       - 🎯 全球直连
-      - JP_2|2.5MB/s
-      - MY_1|1.3MB/s
-      - NL_1|1.1MB/s
+      - US_2|1.8MB/s
   - name: 🍎 苹果服务
     type: select
     proxies:
       - 🔰 节点选择
       - 🎯 全球直连
       - ♻️ 自动选择
-      - JP_2|2.5MB/s
-      - MY_1|1.3MB/s
-      - NL_1|1.1MB/s
+      - US_2|1.8MB/s
   - name: 🎯 全球直连
     type: select
     proxies:
@@ -130,9 +101,7 @@ proxy-groups:
       - 🔰 节点选择
       - 🎯 全球直连
       - ♻️ 自动选择
-      - JP_2|2.5MB/s
-      - MY_1|1.3MB/s
-      - NL_1|1.1MB/s
+      - US_2|1.8MB/s
 rules:
   - DOMAIN-SUFFIX,local,🎯 全球直连
   - IP-CIDR,192.168.0.0/16,🎯 全球直连,no-resolve

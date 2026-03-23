@@ -1,57 +1,90 @@
-# 基础代理端口配置
 port: 7890
 socks-port: 7891
+allow-lan: true
+ipv6: false
 mode: rule
-log-level: error
-external-controller: '0.0.0.0:9090'
+log-level: info
+keep-alive-interval: 15
+external-controller: 0.0.0.0:9090
 external-ui: /usr/local/etc/clash/ui
+global-client-fingerprint: chrome
+profile:
+  store-selected: true
 
-# TUN模式配置（网关核心）
-tun:
-  enable: true
-  stack: system
-  device: tun_3000
-  mtu: 1500 
-  auto-route: true   
-  strict-route: true 
-  auto-detect-interface: true
-  dns-hijack:
-    - any:53 
-    - tcp://any:53
-  route-addr: 0.0.0.0/0
-
-# DNS配置（核心修复：避开53端口）
-dns:
-  enable: true
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.0/16
-  listen: 0.0.0.0:7853 
-  nameserver: 
-    - 127.0.0.1:5335
-
-# 流量嗅探
 sniffer:
   enable: true
   sniff:
     HTTP:
-      ports: [80, 8080, 8443, 8880]
+      ports: [80, 8080-8880]
       override-destination: true
     TLS:
       ports: [443, 8443]
     QUIC:
       ports: [443, 8443]
   skip-domain:
+    - "Mijia Cloud"
     - "+.push.apple.com"
-    - "+.apple.com" 
-    - "+.icloud.com"
-    - "+.microsoft.com"
 
-# （可选）添加规则集（如果需要）
-# rule-providers:
-#   reject:
-#     type: http
-#     url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
-#     path: ./rules/reject.yaml
-#     interval: 86400
+dns:
+  enable: true
+  prefer-h3: false
+  use-hosts: true
+  use-system-hosts: true
+  # listen: 0.0.0.0:53
+  respect-rules: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.0/15
+  fake-ip-filter-mode: whitelist
+  fake-ip-filter:
+    - rule-set:openai
+  nameserver-policy:
+    '+.arpa': '10.0.0.1'
+  nameserver:
+    - 127.0.0.1:5335
 
+tun:
+  enable: true
+  stack: system
+  auto-route: true
+  auto-redirect: false
+  auto-detect-interface: true
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+  device: tun_3000
+  mtu: 9000
+  strict-route: true
+route-address: [
+  "198.18.0.0/15",   
+  "fc00::/18",  
+  # telegram ip
+  "91.108.56.0/22",
+  "91.108.4.0/22",
+  "91.108.8.0/22",
+  "91.108.16.0/22",
+  "91.108.12.0/22",
+  "149.154.160.0/20",
+  "91.105.192.0/23",
+  "91.108.20.0/22",
+  "185.76.151.0/24",
+  "2001:b28:f23d::/48",
+  "2001:b28:f23f::/48",
+  "2001:67c:4e8::/48",
+  "2001:b28:f23c::/48",
+  "2a0a:f280::/32",
+]
 
+rule-providers:
+  openai:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/openai.yaml"
+    path: ./ruleset/openai.yaml
+    interval: 86400
+
+  geosite_cn:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/cn.yaml"
+    path: ./ruleset/geosite_cn.yaml
+    interval: 86400

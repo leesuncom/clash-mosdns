@@ -5,7 +5,7 @@ plugins:
     args:
       forward: false
       preset: 13.78.0.0
-      send: false
+      send: true
       mask4: 17
 
   - tag: ecs_sjc
@@ -13,29 +13,19 @@ plugins:
     args:
       forward: false
       preset: 151.101.196.0
-      send: false
+      send: true
       mask4: 22
 
   - tag: ecs_lax
     type: ecs_handler
     args:
       forward: false
-      preset: 151.101.196.0
-      send: false
+      preset: 151.101.68.0  # 洛杉矶精准段
+      send: true
       mask4: 22
 
-  # ===================== 3. 国内 DNS 上游（优先 Unbound，兜底阿里云/DNSPod）=====================
+  # ===================== 国内 DNS 上游（统一使用 forward_local）=====================
   - tag: forward_local
-    type: forward
-    args:
-      concurrent: 1
-      upstreams:
-        - addr: "https://doh.pub/dns-query"
-          dial_addr: "1.12.12.12"
-        - addr: "tls://dot.pub:853"
-          dial_addr: "120.53.53.53"
-
-  - tag: forward_dnspod
     type: forward
     args:
       concurrent: 1
@@ -55,51 +45,29 @@ plugins:
           dial_addr: "223.5.5.5"
           enable_http3: true
 
-  # ===================== 4. 境外 DNS 上游（走 Clash 代理，防污染）=====================
+  # ===================== 境外 DNS 上游（全走 Clash 代理，防污染）=====================
   - tag: forward_remote
     type: forward
     args:
       concurrent: 3
       upstreams:
-        - addr: "udp://127.0.0.1:7853"
-          enable_pipeline: true
         - addr: "udp://127.0.0.1:5353"
           enable_pipeline: true
-        - addr: "tls://1.1.1.1:853"
-          dial_addr: "1.1.1.1"
-        - addr: "https://cloudflare-dns.com/dns-query"
-          dial_addr: "1.0.0.1"
-          enable_http3: true
 
-  # ===================== 解析序列（修复原有缩进/语法错误）=====================
-  # 国内域名解析序列
-  - tag: domestic_sequence
-    type: sequence
-    args:
-      - exec: prefer_ipv4
-      - exec: $forward_local
-      - exec: $forward_dnspod
-      - exec: $forward_alidns
-      - exec: accept
-
-  # 境外域名 IPv4 解析序列
+  # ===================== 解析序列（优化后）=====================
   - tag: remote_sequence
     type: sequence
     args:
       - exec: prefer_ipv4
       - exec: $ecs_sjc
       - exec: $forward_remote
-      - exec: return
 
-  # 境外域名 IPv6 解析序列
   - tag: remote_sequence_ipv6
     type: sequence
     args:
       - exec: prefer_ipv6
       - exec: $forward_remote
-      - exec: return
 
-  # 兜底：有解析结果直接返回
   - tag: has_resp_sequence
     type: sequence
     args:
