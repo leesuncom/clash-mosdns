@@ -7,6 +7,7 @@ log-level: info
 keep-alive-interval: 15
 external-controller: 0.0.0.0:9090
 external-ui: /usr/local/etc/clash/ui
+secret: 123456
 global-client-fingerprint: chrome
 profile:
   store-selected: true
@@ -91,3 +92,4 @@ rule-providers:
     url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/cn.yaml"
     path: ./ruleset/geosite_cn.yaml
     interval: 86400
+
