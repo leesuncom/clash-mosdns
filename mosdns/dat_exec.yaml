@@ -4,40 +4,40 @@ plugins:
     type: ip_set
     args:
       files:
-        - "/usr/local/etc/mosdns/domains/geoip_private.txt"
+        - "/usr/local/etc/mosdns/rule/geoip_private.txt"
   - tag: geoip_cn # cn ip（保留但仅用于内网逻辑）
     type: ip_set
     args:
       files:
-        - "/usr/local/etc/mosdns/domains/geoip_cn.txt"
+        - "/usr/local/etc/mosdns/rule/geoip_cn.txt"
 
   - tag: geosite_cn # cn 域名（保留但不再用于DNS分支）
     type: domain_set
     args:
       files:
-        - "/usr/local/etc/mosdns/domains/geosite_cn.txt"
-        - "/usr/local/etc/mosdns/domains/whitelist.txt"
+        - "/usr/local/etc/mosdns/rule/geosite_cn.txt"
+        - "/usr/local/etc/mosdns/rule/whitelist.txt"
   - tag: geosite_gfw # gfw 域名
     type: domain_set
     args:
       files:
-        - "/usr/local/etc/mosdns/domains/geosite_gfw.txt"
-        - "/usr/local/etc/mosdns/domains/greylist.txt"
+        - "/usr/local/etc/mosdns/rule/geosite_gfw.txt"
+        - "/usr/local/etc/mosdns/rule/greylist.txt"
   - tag: geosite_location-!cn # 非 cn 域名
     type: domain_set
     args:
       files:
-        - "/usr/local/etc/mosdns/domains/geosite_geolocation-!cn.txt"
+        - "/usr/local/etc/mosdns/rule/geosite_geolocation-!cn.txt"
   - tag: geosite_ads-all # 广告域名
     type: domain_set
     args:
       files:
-        - "/usr/local/etc/mosdns/domains/geosite_category-ads-all.txt"
+        - "/usr/local/etc/mosdns/rule/geosite_category-ads-all.txt"
   - tag: self_host_domain
     type: domain_set
     args:
       files:
-        - "/usr/local/etc/mosdns/domains/selfhost.txt"
+        - "/usr/local/etc/mosdns/rule/selfhost.txt"
 
   ################# 可执行插件 ################
 

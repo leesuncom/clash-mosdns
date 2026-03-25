@@ -1,16 +1,19 @@
 log:
-  level: warn
+  level: error  # 🔥 这里从 warn 改为 error，屏蔽所有无害警告
   production: true
-  file: "/var/log/mosdns.log"
+  file: "/var/log/mosdns.log" 
+
+api:
+  http: "127.0.0.1:9091" 
 
 plugins:
-  - tag: "cache"
+  - tag: "cache_0"
     type: cache
     args:
-      size: 32768
-      lazy_cache_ttl: 86400
-      dump_file: "/var/db/mosdns.cache"
-      dump_interval: 300
+      size: 4194304
+      lazy_cache_ttl: 3600 
+      dump_file: /var/db/mosdns.cache
+      dump_interval: 7200
 
   - tag: "reverse_lookup"
     type: reverse_lookup
@@ -23,39 +26,29 @@ plugins:
     type: domain_set
     args:
       files:
-        - "./domains/gfw.txt"
-        - "./domains/proxy-list.txt"
+        - "/usr/local/etc/mosdns/rule/gfw.txt"
+        - "/usr/local/etc/mosdns/rule/proxy-list.txt"
 
   - tag: "direct_domain_set"
     type: domain_set
     args:
       files:
-        - "./domains/direct-list.txt"
+        - "/usr/local/etc/mosdns/rule/direct-list.txt"
 
   - tag: "direct_ip"
     type: ip_set
     args:
       files:
-        - "./ips/all_cn.txt"
+        - "/usr/local/etc/mosdns/rule/all_cn.txt"
 
   - tag: "remote_forward"
     type: forward
     args:
       upstreams:
-        - tag: cloudflare_doh
-          addr: "https://cloudflare-dns.com/dns-query"
-          enable_pipeline: true
-          idle_timeout: 10
-
-        - tag: google_doh
-          addr: "https://dns.google/dns-query"
-          enable_pipeline: true
-          idle_timeout: 10      
-
         - tag: dnscrypt_plugin_udp
           addr: "udp://127.0.0.1:5353"
           enable_pipeline: true
-          idle_timeout: 15
+          idle_timeout: 15 
 
   - tag: "domestic_forward"
     type: forward
@@ -63,11 +56,6 @@ plugins:
       upstreams:
         - tag: dnspod_doh
           addr: "https://doh.pub/dns-query"
-          enable_pipeline: true
-          idle_timeout: 10
-
-        - tag: 360_doh
-          addr: "https://doh.360.cn/dns-query"
           enable_pipeline: true
           idle_timeout: 10
 
@@ -87,8 +75,6 @@ plugins:
     type: sequence
     args:
       - exec: $remote_forward
-      - matches: "resp_ip $direct_ip"
-        exec: $domestic_forward
       - exec: goto ttl_sequence
 
   - tag: "fallback"
@@ -99,11 +85,11 @@ plugins:
       threshold: 1800
       always_standby: false
 
-  - tag: "main_sequence"
+  - tag: "main"
     type: sequence
     args:
       - exec: prefer_ipv4
-      - exec: $cache
+      - exec: $cache_0
       - matches: has_resp
         exec: accept
       - exec: $reverse_lookup
@@ -113,12 +99,27 @@ plugins:
         exec: goto remote_sequence
       - matches: "qname $direct_domain_set"
         exec: goto domestic_sequence
-      - matches: "resp_ip $direct_ip"
-        exec: goto domestic_sequence
       - exec: $fallback
-
+      
   - tag: udp_server
     type: udp_server
     args:
-      entry: main_sequence
-      listen: :5335
+      entry: main
+      listen: "127.0.0.1:5335"
+
+  - tag: tcp_server
+    type: tcp_server
+    args:
+      entry: main
+      listen: "127.0.0.1:5335"
+      idle_timeout: 10
+
+  - tag: "http_server"
+    type: "http_server"
+    args:
+      entries:
+        - path: /dns-query
+          exec: main
+      src_ip_header: "X-Forwarded-For"
+      listen: 127.0.0.1:5443
+      idle_timeout: 30

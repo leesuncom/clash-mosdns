@@ -1,2 +1,1 @@
-# MosDNS Rules
-
+# mosdns greylist
