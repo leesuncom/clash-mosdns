@@ -23,7 +23,7 @@ tun:
 dns:
   enable: true
   listen: 0.0.0.0:7853              # Clash 内部 DNS 端口，不占用 53
-#  enhanced-mode: redir-host         # 必须使用 redir-host，因为 MosDNS 返回真实 IP
+  enhanced-mode: fake-ip    
   respect-rules: true               # DNS 查询遵守规则（用于解析 fallback 中的 DoH 域名）
   use-hosts: true
   use-system-hosts: true
