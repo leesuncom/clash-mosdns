@@ -32,8 +32,7 @@ plugins:
       upstreams:
         - addr: "https://doh.pub/dns-query"
           dial_addr: "1.12.12.12"
-        - addr: "tls://dot.pub:853"
-          dial_addr: "120.53.53.53"
+          enable_pipeline: true
 
   - tag: forward_alidns
     type: forward
@@ -51,8 +50,18 @@ plugins:
     args:
       concurrent: 3
       upstreams:
+        - tag: cloudflare_doh
+          addr: "https://cloudflare-dns.com/dns-query"
+          enable_pipeline: true
+          idle_timeout: 10
+        - tag: google_doh
+          addr: "https://dns.google/dns-query"
+          enable_pipeline: true
+          idle_timeout: 10 
         - addr: "udp://127.0.0.1:5353"
           enable_pipeline: true
+#           bootstrap: 223.5.5.5 #bootstrap地址负责解析doh域名 只能udp
+#           bootstrap_version: 4 #解析的doh域名返回ipv4还是v6
 
   # ===================== 解析序列（优化后）=====================
   - tag: remote_sequence

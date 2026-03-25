@@ -10,7 +10,7 @@ tun:
   enable: true
   stack: system
   device: tun_3000
-  mtu: 1500
+  mtu: 9000
   auto-route: true
   strict-route: true
   auto-detect-interface: true
@@ -23,7 +23,7 @@ dns:
   enable: true
   listen: 127.0.0.1:7853
   enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.0/16
+  fake-ip-range: 198.18.0.0/15
   nameserver:
     - 127.0.0.1:5335     # 所有 DNS 查询都交给 MosDNS
 
