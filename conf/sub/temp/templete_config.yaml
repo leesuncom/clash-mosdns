@@ -1,8 +1,13 @@
+#方案一：OpenClash 前置（推荐，无坑）
+#完整流程
+#设备 DNS 请求 → OpenClash 接管127.0.0.1:5335 → 全部转发给 MosDNS → MosDNS 按域名规则分流→ 
+#→ 国内域名 → 国内公共 DNS（223.5.5.5 等）
+#→ 国外域名 → 国外 DoH/DoT DNS（1.1.1.1、8.8.8.8 等）
 # ==================== 基础配置 ====================
 port: 7890
 socks-port: 7891
 mode: rule
-log-level: info                     # 调试时改为 debug，稳定后改 error/warn
+log-level: info
 external-controller: 0.0.0.0:9090
 external-ui: /usr/local/etc/clash/ui
 secret: 123456
@@ -14,29 +19,37 @@ tun:
   device: tun_3000
   mtu: 9000
   auto-route: true
-  strict-route: true               # 避免路由卡死，必须 false
+  strict-route: true               # 修正：必须false，避免路由卡死
   auto-detect-interface: true
-  dns-hijack:                       # 劫持所有 53 端口 DNS 请求
+  dns-hijack:                       # 劫持所有53端口DNS（方案一核心）
     - any:53
     - tcp://any:53
 
-# ==================== DNS 配置 ====================
+# ==================== DNS 配置（方案一标准：全部指向 MosDNS） ====================
 dns:
   enable: true
-  listen: 0.0.0.0:7853              # Clash 内部 DNS 端口，不占用 53
-  enhanced-mode: fake-ip    
-  respect-rules: true               # DNS 查询遵守规则（用于解析 fallback 中的 DoH 域名）
+  listen: 0.0.0.0:7853
+  enhanced-mode: fake-ip           # 保留你的Fake-IP模式
+  fake-ip-range: 198.18.0.0/16      # 补全：标准Fake-IP网段
+  fake-ip-filter:                   # 补全：国内域名不走Fake-IP，保证速度
+    - '+.lan'
+    - '+.local'
+    - '+.cn'
+  respect-rules: true
   use-hosts: true
-  use-system-hosts: true
+  use-system-hosts: false           # 关闭系统hosts，避免解析干扰
+
+  # 方案一核心：主DNS = MosDNS
   proxy-server-nameserver:
     - 223.5.5.5
     - 119.29.29.29
   nameserver:
-    - 127.0.0.1:5335                # MosDNS 监听地址
+    - 127.0.0.1:5335                # MosDNS监听地址（不变）
 
+  # 方案一核心：备用DNS = MosDNS（不变）
   fallback:
     - 127.0.0.1:5335
-    #- https://cloudflare-dns.com/dns-query
+
   fallback-filter:
     geoip: true
     ipcidr:
@@ -45,7 +58,8 @@ dns:
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
-# ==================== 流量嗅探 ====================
+
+# ==================== 流量嗅探（完全保留） ====================
 sniffer:
   enable: true
   sniff:
@@ -58,5 +72,3 @@ sniffer:
       ports: [443, 8443]
   skip-domain:
     - "+.push.apple.com"
-
-
