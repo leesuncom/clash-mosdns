@@ -5,6 +5,7 @@ mode: rule
 log-level: info                     # 调试时改为 debug，稳定后改 error/warn
 external-controller: 0.0.0.0:9090
 external-ui: /usr/local/etc/clash/ui
+secret: 123456
 
 # ==================== TUN 模式（启用 DNS 劫持） ====================
 tun:
@@ -34,8 +35,8 @@ dns:
     - 127.0.0.1:5335                # MosDNS 监听地址
 
   fallback:
-    - https://dns.google/dns-query
-    - https://cloudflare-dns.com/dns-query
+    - 127.0.0.1:5335
+    #- https://cloudflare-dns.com/dns-query
   fallback-filter:
     geoip: true
     ipcidr:
@@ -57,4 +58,5 @@ sniffer:
       ports: [443, 8443]
   skip-domain:
     - "+.push.apple.com"
+
 
