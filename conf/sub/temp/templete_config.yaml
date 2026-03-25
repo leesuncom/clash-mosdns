@@ -35,7 +35,7 @@ dns:
     - '+.lan'
     - '+.local'
     - '+.cn'
-  respect-rules: true
+  respect-rules: false
   use-hosts: true
   use-system-hosts: false           # 关闭系统hosts，避免解析干扰
 
