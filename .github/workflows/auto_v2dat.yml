@@ -8,6 +8,8 @@ on:
 jobs:
   build-and-unpack:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout repository
@@ -53,6 +55,11 @@ jobs:
         echo "Verifying checksum..."
         sha256sum --check "geosite.dat.sha256sum"
 
+    - name: Create output directory
+      run: |
+        set -e
+        mkdir -p mosdns/rule
+
     - name: Unpack geosite and geoip
       run: |
         set -e
@@ -63,22 +70,19 @@ jobs:
         ./v2dat/v2dat unpack geosite -o mosdns/rule -f 'geolocation-!cn' geosite.dat
         ./v2dat/v2dat unpack geosite -o mosdns/rule -f category-ads-all geosite.dat
 
-    - name: Set up git
+    - name: Commit and push changes
       run: |
         set -e
-        git config user.email "${{ secrets.GIT_USER_EMAIL }}"
-        git config user.name "${{ secrets.GIT_USER_NAME }}"
-
-    - name: Commit and push
-      run: |
-        set -e
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global --add safe.directory /github/workspace
+        
         git add mosdns/rule/
         if ! git diff --staged --quiet mosdns/rule/; then
-          git commit -m "Automated geoip/site update"
+          git commit -m "Automated geoip/geosite update"
           git push
         else
           echo "No changes to commit."
         fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
