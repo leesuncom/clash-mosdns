@@ -1,91 +1,68 @@
-#方案一：OpenClash 前置（推荐，无坑）
-#完整流程
-#设备 DNS 请求 → OpenClash 接管127.0.0.1:5335 → 全部转发给 MosDNS → MosDNS 按域名规则分流→ 
-#→ 国内域名 → 国内公共 DNS（223.5.5.5 等）
-#→ 国外域名 → 国外 DoH/DoT DNS（1.1.1.1、8.8.8.8 等）
+#方案 1：AdGuard Home 前置 + MosDNS 中置 + Clash 后置（推荐）
+#网络流向：客户端 → AdGuard Home (53 端口) → MosDNS (5300) → Clash (5333) → 加密 DNS (国内外分流)
+#核心配置要点：
+#AdGuard Home：监听 53 端口，关闭自身缓存，上游设置为 MosDNS，启用广告过滤和家长控制
+#MosDNS：负责 GeoIP/GeoSite 分流，国内域名走阿里云 / 腾讯云 DOH，国外域名走 Clash 代理的 Cloudflare/Google DOH
+#Clash：启用 TUN 模式和 Fake-IP，关闭 DNS 劫持，上游设置为加密 DNS，确保国外 DNS 请求必走代理
+
 # ==================== 基础配置 ====================
 port: 7890
 socks-port: 7891
 mode: rule
-log-level: info
+log-level: info                     # 可根据需要调整为 error
 external-controller: 0.0.0.0:9090
 external-ui: /usr/local/etc/clash/ui
-secret: 123456
+secret: 123456                      # 如需认证，保留此行
 
-# ==================== TUN 模式（启用 DNS 劫持） ====================
+# ==================== TUN 模式 ====================
+# 启用 TUN，但不劫持 DNS（由 AdGuardHome / MosDNS 接管入口）
 tun:
   enable: true
   stack: system
   device: tun_3000
   mtu: 9000
   auto-route: true
-  strict-route: true               # 修正：必须false，避免路由卡死
+  strict-route: false               # 避免路由卡死
   auto-detect-interface: true
-  dns-hijack:                       # 劫持所有53端口DNS（方案一核心）
-    - any:53
-    - tcp://any:53
+  # dns-hijack 已删除，DNS 劫持由 AdGuardHome 完成
 
-# ==================== DNS 配置（方案一标准：全部指向 MosDNS） ====================
+# ==================== DNS 配置 ====================
 dns:
   enable: true
-  listen: 0.0.0.0:7853
-  enhanced-mode: fake-ip           # 保留你的Fake-IP模式
-  fake-ip-range: 198.18.0.0/16      # 补全：标准Fake-IP网段
-  fake-ip-filter:
-    - rule-set:openai
-    - rule-set:geosite_cn
-
+  listen: 0.0.0.0:7853              # MosDNS 将国外域名查询发到此端口
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.0/16
+  fake-ip-persist: true             # 防止重启后映射丢失
   respect-rules: true
   use-hosts: true
-  use-system-hosts: false           # 关闭系统hosts，避免解析干扰
+  use-system-hosts: false
 
-  # 方案一核心：主DNS = MosDNS
+  # 节点解析（国内 DNS，直连）
   proxy-server-nameserver:
     - 223.5.5.5
     - 119.29.29.29
+
+  # 国外 DNS：使用 DoH（直接 IP 形式，避免解析泄露）
   nameserver:
-    - 127.0.0.1:5335                # MosDNS监听地址（不变）
+    - https://1.1.1.1/dns-query     # Cloudflare DoH
+    - https://8.8.8.8/dns-query     # Google DoH
+    - https://208.67.222.222/dns-query # OpenDNS DoH
 
-  # 方案一核心：备用DNS = MosDNS（不变）
+  # fallback 可省略，但保留作为补充（仍使用 DoH）
   fallback:
-    - 127.0.0.1:5335
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
 
+  # fallback 过滤（仅用于国内 IP 跳过 fallback，避免污染）
   fallback-filter:
     geoip: true
+    geoip-code: CN
     ipcidr:
       - 240.0.0.0/4
 
+  # 基础解析（国内 DNS，直连）
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
-
-# ==================== 流量嗅探（完全保留） ====================
-sniffer:
-  enable: true
-  sniff:
-    HTTP:
-      ports: [80, 8080-8880]
-      override-destination: true
-    TLS:
-      ports: [443, 8443]
-    QUIC:
-      ports: [443, 8443]
-  skip-domain:
-    - "+.push.apple.com"
-
-rule-providers:
-  openai:
-    type: http
-    behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/openai.yaml"
-    path: ./ruleset/openai.yaml
-    interval: 86400
-
-  geosite_cn:
-    type: http
-    behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/cn.yaml"
-    path: ./ruleset/geosite_cn.yaml
-    interval: 86400
-
 
