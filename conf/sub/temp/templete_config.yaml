@@ -12,7 +12,7 @@ mode: rule
 log-level: info                     # 可根据需要调整为 error
 external-controller: 0.0.0.0:9090
 external-ui: /usr/local/etc/clash/ui
-secret: 123456                      # 如需认证，保留此行
+# secret: 123456                      # 如需认证，保留此行
 
 # ==================== TUN 模式 ====================
 # 启用 TUN，但不劫持 DNS（由 AdGuardHome / MosDNS 接管入口）
