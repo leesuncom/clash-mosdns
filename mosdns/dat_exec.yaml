@@ -1,94 +1,69 @@
 plugins:
   ################## 数据源 ################
-  - tag: geoip_private # 私网 ip
+  - tag: geoip_private       # 私网 ip
     type: ip_set
     args:
       files:
         - "/usr/local/etc/mosdns/rule/geoip_private.txt"
-  - tag: geoip_cn # cn ip（保留但仅用于内网逻辑）
+
+  - tag: geoip_cn            # cn ip（保留但仅用于内网逻辑）
     type: ip_set
     args:
       files:
         - "/usr/local/etc/mosdns/rule/geoip_cn.txt"
 
-  - tag: geosite_cn # cn 域名（保留但不再用于DNS分支）
+  - tag: geosite_cn          # cn 域名（保留但不再用于DNS分支）
     type: domain_set
     args:
       files:
         - "/usr/local/etc/mosdns/rule/geosite_cn.txt"
         - "/usr/local/etc/mosdns/rule/whitelist.txt"
-  - tag: geosite_gfw # gfw 域名
+
+  - tag: geosite_gfw         # gfw 域名
     type: domain_set
     args:
       files:
         - "/usr/local/etc/mosdns/rule/geosite_gfw.txt"
         - "/usr/local/etc/mosdns/rule/greylist.txt"
-  - tag: geosite_location-!cn # 非 cn 域名
+
+  - tag: geosite_location-!cn  # 非 cn 域名
     type: domain_set
     args:
       files:
         - "/usr/local/etc/mosdns/rule/geosite_geolocation-!cn.txt"
-  - tag: geosite_ads-all # 广告域名
-    type: domain_set
-    args:
-      files:
-        - "/usr/local/etc/mosdns/rule/geosite_category-ads-all.txt"
-  - tag: self_host_domain
-    type: domain_set
-    args:
-      files:
-        - "/usr/local/etc/mosdns/rule/selfhost.txt"
 
-  ################# 可执行插件 ################
-
-  # 缓存 lanc
-  - tag: cache_lan
-    type: cache
-    args:
-      size: 8192
-      lazy_cache_ttl: 86400
-  # 缓存 wan
-  - tag: cache_wan
-    type: cache
-    args:
-      size: 131072
-      lazy_cache_ttl: 86400
-  - tag: cache_short
-    type: cache
-    args:
-      size: 1000
-      lazy_cache_ttl: 60
-
-  # 统一关闭ECS（删除国内ECS逻辑）
-  - tag: no_ecs
-    type: "ecs_handler"
-    args:
-      forward: false 
-      preset: "" 
-      send: false 
-      mask4: 24
-      mask6: 48 
-  
-  # 废弃国内ECS配置（可直接删除，保留仅作注释）
-  # - tag: ecs_cn
-  #   type: "ecs_handler"
+  # - tag: geosite_ads-all    # 广告域名
+  #   type: domain_set
   #   args:
-  #     forward: false
-  #     preset: "127.0.0.1"
-  #     send: false
-  #     mask4: 24
-  #     mask6: 48
+  #     files:
+  #       - "/usr/local/etc/mosdns/rule/geosite_category-ads-all.txt"
 
-  # 调整 ttl
-  - tag: ttl_1m
-    type: sequence
+  - tag: hosts               # hosts
+    type: hosts
     args:
-      - exec: ttl 60
-  - tag: ttl_5m
-    type: sequence
+      files:
+        - "/usr/local/etc/mosdns/rule/hosts.txt"
+
+  - tag: redirect            # 重定向
+    type: redirect
     args:
-      - exec: ttl 300
-  - tag: ttl_1h
-    type: sequence
+      files:
+        - "/usr/local/etc/mosdns/rule/redirect.txt"
+
+  - tag: ddnslist            # ddns列表
+    type: domain_set
     args:
-      - exec: ttl 3600
+      files:
+        - "/usr/local/etc/mosdns/rule/ddnslist.txt"
+
+  - tag: blocklist           # 域名黑名单
+    type: domain_set
+    args:
+      files:
+        - "/usr/local/etc/mosdns/rule/blocklist.txt"
+
+  - tag: whitelist           # 白名单（强制走国内DNS）
+    type: domain_set
+    args:
+      files:
+        - "/usr/local/etc/mosdns/rule/whitelist.txt"

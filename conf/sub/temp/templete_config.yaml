@@ -31,11 +31,11 @@ dns:
   listen: 0.0.0.0:7853
   enhanced-mode: fake-ip           # 保留你的Fake-IP模式
   fake-ip-range: 198.18.0.0/16      # 补全：标准Fake-IP网段
-  fake-ip-filter:                   # 补全：国内域名不走Fake-IP，保证速度
-    - '+.lan'
-    - '+.local'
-    - '+.cn'
-  respect-rules: false
+  fake-ip-filter:
+    - rule-set:openai
+    - rule-set:geosite_cn
+
+  respect-rules: true
   use-hosts: true
   use-system-hosts: false           # 关闭系统hosts，避免解析干扰
 
@@ -72,4 +72,20 @@ sniffer:
       ports: [443, 8443]
   skip-domain:
     - "+.push.apple.com"
+
+rule-providers:
+  openai:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/openai.yaml"
+    path: ./ruleset/openai.yaml
+    interval: 86400
+
+  geosite_cn:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/cn.yaml"
+    path: ./ruleset/geosite_cn.yaml
+    interval: 86400
+
 

@@ -1,111 +1,135 @@
 plugins:
   ################ DNS #################
-  # google doh dot h3（代理用）
-  - tag: google
-    type: forward
-    args:
-      concurrent: 3
-      upstreams:
-        - addr: "https://dns.google/dns-query"
-          dial_addr: "8.8.4.4"
-        - addr: "https://dns.google/dns-query"
-          dial_addr: "8.8.8.8"
-        - addr: "tls://dns.google"
-          dial_addr: "8.8.4.4"
-        - addr: "tls://dns.google"
-          dial_addr: "8.8.8.8"
-        - addr: "https://dns.google/dns-query"
-          dial_addr: "8.8.4.4"
-          enable_http3: true
-        - addr: "https://dns.google/dns-query"
-          dial_addr: "8.8.8.8"
-          enable_http3: true
-
-  # cloudflare doh dot h3（代理备用）
-  - tag: cloudflare
+  - tag: forward_oversea
     type: forward
     args:
       concurrent: 2
       upstreams:
-        - addr: "tls://1.1.1.1"
-          dial_addr: "1.1.1.1"
-        - addr: "tls://1.1.1.1"
-          dial_addr: "1.1.1.1"
-
-  # 查询gfw网站时使用（代理）
-  - tag: forward_remote
-    type: forward
-    args:
-      upstreams:
-        - addr: "udp://127.0.0.1:5353"
-          enable_pipeline: true
-
-  # 国外代理主DNS
-  - tag: self_hosted
-    type: forward
-    args:
-      upstreams:
-        - addr: "udp://127.0.0.1:5353"
-          enable_pipeline: true
-
-  # 国内主DNS：阿里DNS（强化可用性）
-  - tag: ali
+        - addr: "https://dns.google/dns-query"
+          socks5: "127.0.0.1:7891"
+        - addr: "https://cloudflare-dns.com/dns-query"
+          socks5: "127.0.0.1:7891"
+        - addr: "https://dns.quad9.net/dns-query"
+          socks5: "127.0.0.1:7891"
+        - addr: "https://dns.opendns.com/dns-query"
+          socks5: "127.0.0.1:7891"
+        - addr: "https://dns.adguard-dns.com/dns-query"
+          socks5: "127.0.0.1:7891"
+  
+  - tag: forward_domestic
     type: forward
     args:
       concurrent: 3
       upstreams:
+        # ali doh dot h3
+        - addr: "https://dns.alidns.com/dns-query"
+          dial_addr: "223.6.6.6"
+        - addr: "tls://dns.alidns.com"
+          dial_addr: "2400:3200:baba::1"
+          enable_pipeline: false # ali dot 不支持 pipeline
+        - addr: "tls://dns.alidns.com"
+          dial_addr: "223.5.5.5"
+          enable_pipeline: false
+        - addr: "https://dns.alidns.com/dns-query"
+          dial_addr: "223.5.5.5"
+          enable_http3: true
+        - addr: "https://dns.alidns.com/dns-query"
+          dial_addr: "2400:3200::1"
+          enable_http3: true
+        # dnspod doh dot
         - addr: "https://doh.pub/dns-query"
           dial_addr: "1.12.12.12"
         - addr: "https://doh.pub/dns-query"
           dial_addr: "120.53.53.53"
         - addr: "tls://dot.pub"
-          dial_addr: "120.53.53.53"
-
-  # 国内备用DNS：DNSPod
-  - tag: dnspod
-    type: forward
-    args:
-      concurrent: 3
-      upstreams:
-        - addr: "https://doh.pub/dns-query"
           dial_addr: "1.12.12.12"
-        - addr: "https://doh.pub/dns-query"
-          dial_addr: "120.53.53.53"
+          enable_pipeline: true
         - addr: "tls://dot.pub"
           dial_addr: "120.53.53.53"
+          enable_pipeline: true
 
-  # local dns（局域网）
-  - tag: local
+  # 基础OpenClash DNS转发（无超时，作为fallback的primary）
+  - tag: forward_openclash
     type: forward
     args:
       concurrent: 1
       upstreams:
-        - addr: "udp://127.0.0.1:53"
+        - addr: 127.0.0.1:7853  
 
-  - tag: self_host
+  # 基础DNSCrypt DNS转发（作为fallback的secondary）
+  - tag: forward_dnscrypt
     type: forward
     args:
       concurrent: 1
       upstreams:
-        - addr: "udp://127.0.0.1:53"
+        - addr: 127.0.0.1:5353
 
-  # 拒绝响应相关
-  - tag: reject_2
+  # 新增：OpenClash超时自动切DNSCrypt的降级插件
+  - tag: fallback_openclash_dnscrypt
+    type: fallback
+    args:
+      primary: forward_openclash    # 优先走OpenClash DNS
+      secondary: forward_dnscrypt   # 超时后走DNSCrypt
+      threshold: 3000               # 超时阈值：3000ms（3秒）
+      always_standby: false         # 非预启动，仅超时触发降级
+
+  - tag: forward_local
+    type: forward
+    args:
+      concurrent: 1
+      upstreams:
+        - addr: 127.0.0.1:5355  # dnsmasq 的 DNS 端口
+
+  ################# 缓存 ################
+  # - tag: cache_dns
+  #   type: cache
+  #   args:
+  #     size: 65535
+  #     lazy_cache_ttl: 86400
+
+  ################# TTL 覆写 ################
+  - tag: ttl_modify
+    type: "sequence"
+    args:
+      - exec: ttl 3600-86400
+
+  ################# 回滚机制（用于查询非cn域名） ################
+  # fallback 的备份序列，进入此序列就假设代理服务器宕机
+  - tag: seq_backup
     type: sequence
     args:
-      - exec: reject 2
-
-  - tag: reject_3
-    type: sequence
+      - exec: query_summary oversea_failure # 日志
+      - exec: $forward_dnscrypt
+      - matches: has_resp # 有结果就马上返回，不做污染判断
+        exec: accept
+      - matches: "!has_resp"  # 连国内DNS也不响应就说明网络不通
+        exec: reject 2
+  
+  - tag: fallback_nocn
+    type: fallback
     args:
-      - exec: reject 3
+      primary: fallback_openclash_dnscrypt  # 替换：优先走降级插件（OpenClash→DNSCrypt）
+      secondary: seq_backup
+      threshold: 5000
+      always_standby: false # 等待5s若国外DNS无响应就启用国内DNS
 
-  - tag: reject_5
-    type: sequence
+  ################# 其他插件 ################
+  # 附加 ecs cn 信息
+  - tag: ecs_cn
+    type: "ecs_handler"
     args:
-      - exec: reject 5
+      forward: true # 是否转发来自下游的 ecs
+      # preset: "" # 发送预设 ecs(在adguardhome中设置ECS ip)
+      send: true # 是否发送 ecs
+      mask4: 24 # ipv4 掩码。默认 24
+      mask6: 48 # ipv6 掩码。默认 48
 
-  - tag: blackhole
-    type: sequence
+  # 禁用 ECS
+  - tag: no_ecs
+    type: "ecs_handler"
     args:
-      - exec: black_hole 127.0.0.1 ::1 0.0.0.0
+      forward: false
+      preset: ""
+      send: false
+      mask4: 24
+      mask6: 48 
