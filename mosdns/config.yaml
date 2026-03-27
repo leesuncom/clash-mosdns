@@ -30,6 +30,10 @@ plugins:
     args:
       - exec: $no_ecs
       - exec: $fallback_openclash_dnscrypt # 替换：走OpenClash→DNSCrypt降级
+      - matches: has_resp
+        exec: accept
+      - matches: "!has_resp"
+        exec: reject 2
 
   # 非 cn 域名查询
   - tag: query_nocn
@@ -66,6 +70,10 @@ plugins:
       - exec: $no_ecs
       - exec: $fallback_openclash_dnscrypt # 替换：走OpenClash→DNSCrypt降级
       - exec: query_summary query_other_main # 日志
+      - matches: has_resp
+        exec: accept
+      - matches: "!has_resp"
+        exec: reject 2
 
   ################ 解析结果处理序列 #################
   # 预处理序列
@@ -123,11 +131,11 @@ plugins:
         exec: $query_lan
       - exec: jump has_resp_pre
 
-      - matches: # 其他类型的DNS查询走国内DNS
-        - "!qtype 1"
-        - "!qtype 28"
-        exec: $query_other_pre
-      - exec: jump has_resp_pre
+#      - matches: # 其他类型的DNS查询走国内DNS
+#        - "!qtype 1"
+#        - "!qtype 28"
+#        exec: $query_other_pre
+#      - exec: jump has_resp_pre
 
   # main_sequence
   - tag: main_sequence
