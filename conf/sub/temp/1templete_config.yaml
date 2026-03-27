@@ -43,3 +43,352 @@ sniffer:
     - "+.apple.com"
     - "+.icloud.com"
     - "+.microsoft.com"
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+port: 7890
+socks-port: 7891
+allow-lan: true
+ipv6: false
+mode: rule
+log-level: info
+keep-alive-interval: 15
+external-controller: 0.0.0.0:9090
+external-ui: /usr/local/etc/clash/ui
+secret: 123456
+profile:
+  store-selected: true
+
+sniffer:
+  enable: true
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: true
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443, 8443]
+  skip-domain:
+    - "Mijia Cloud"
+    - "+.push.apple.com"
+
+dns:
+  enable: true
+  prefer-h3: false
+  use-hosts: true
+  use-system-hosts: true
+  # listen: 0.0.0.0:53
+  listen: 0.0.0.0:7853
+  respect-rules: false
+  default-nameserver:
+    - 127.0.0.1:5335 
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.0/15
+  fake-ip-filter-mode: whitelist
+  fake-ip-filter:
+    - rule-set:openai
+  nameserver-policy:
+    '+.arpa': '10.0.0.1'
+  nameserver:
+    - 127.0.0.1:5335
+
+tun:
+  enable: true
+  stack: system
+  auto-route: true
+  auto-redirect: false
+  auto-detect-interface: true
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+  device: tun_3000
+  mtu: 9000
+  strict-route: true
+route-address: [
+  "198.18.0.0/15",   
+  "fc00::/18",  
+  # telegram ip
+  "91.108.56.0/22",
+  "91.108.4.0/22",
+  "91.108.8.0/22",
+  "91.108.16.0/22",
+  "91.108.12.0/22",
+  "149.154.160.0/20",
+  "91.105.192.0/23",
+  "91.108.20.0/22",
+  "185.76.151.0/24",
+  "2001:b28:f23d::/48",
+  "2001:b28:f23f::/48",
+  "2001:67c:4e8::/48",
+  "2001:b28:f23c::/48",
+  "2a0a:f280::/32",
+]
+
+rule-providers:
+  openai:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/openai.yaml"
+    path: ./ruleset/openai.yaml
+    interval: 86400
+
+  geosite_cn:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/cn.yaml"
+    path: ./ruleset/geosite_cn.yaml
+    interval: 86400
+
+
+——————————————————————————————————————————————————————————————————
+#方案一：OpenClash 前置（推荐，无坑）
+#完整流程
+#设备 DNS 请求 → OpenClash 接管127.0.0.1:5335 → 全部转发给 MosDNS → MosDNS 按域名规则分流→ 
+#→ 国内域名 → 国内公共 DNS（223.5.5.5 等）
+#→ 国外域名 → 国外 DoH/DoT DNS（1.1.1.1、8.8.8.8 等）
+# ==================== 基础配置 ====================
+port: 7890
+socks-port: 7891
+mode: rule
+log-level: info
+external-controller: 0.0.0.0:9090
+external-ui: /usr/local/etc/clash/ui
+secret: 123456
+
+# ==================== TUN 模式（启用 DNS 劫持） ====================
+tun:
+  enable: true
+  stack: system
+  device: tun_3000
+  mtu: 9000
+  auto-route: true
+  strict-route: true
+  auto-detect-interface: true
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+
+# ==================== DNS 配置（方案一标准：全部指向 MosDNS） ====================
+dns:
+  enable: true
+  listen: 0.0.0.0:7853
+
+  nameserver:
+    - 127.0.0.1:5335                # MosDNS监听地址（不变）
+
+
+
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+
+# ==================== 流量嗅探（完全保留） ====================
+sniffer:
+  enable: true
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: true
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443, 8443]
+  skip-domain:
+    - "+.push.apple.com"
+————————————————————————————————————————————————————————————————————————————————————————
+#方案一：OpenClash 前置（推荐，无坑）
+#完整流程
+#设备 DNS 请求 → OpenClash 接管127.0.0.1:5335 → 全部转发给 MosDNS → MosDNS 按域名规则分流→ 
+#→ 国内域名 → 国内公共 DNS（223.5.5.5 等）
+#→ 国外域名 → 国外 DoH/DoT DNS（1.1.1.1、8.8.8.8 等）
+# ==================== 基础配置 ====================
+port: 7890
+socks-port: 7891
+mode: rule
+log-level: info
+external-controller: 0.0.0.0:9090
+external-ui: /usr/local/etc/clash/ui
+secret: 123456
+
+# ==================== TUN 模式（启用 DNS 劫持） ====================
+tun:
+  enable: true
+  stack: system
+  device: tun_3000
+  mtu: 9000
+  auto-route: true
+  strict-route: true               # 修正：必须false，避免路由卡死
+  auto-detect-interface: true
+  dns-hijack:                       # 劫持所有53端口DNS（方案一核心）
+    - any:53
+    - tcp://any:53
+
+# ==================== DNS 配置（方案一标准：全部指向 MosDNS） ====================
+dns:
+  enable: true
+  listen: 0.0.0.0:7853
+  enhanced-mode: fake-ip           # 保留你的Fake-IP模式
+  fake-ip-range: 198.18.0.0/16      # 补全：标准Fake-IP网段
+  fake-ip-filter:
+    - rule-set:openai
+    - rule-set:geosite_cn
+
+  respect-rules: true
+  use-hosts: true
+  use-system-hosts: false           # 关闭系统hosts，避免解析干扰
+
+  # 方案一核心：主DNS = MosDNS
+  proxy-server-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - 127.0.0.1:5335                # MosDNS监听地址（不变）
+
+  # 方案一核心：备用DNS = MosDNS（不变）
+  fallback:
+    - 127.0.0.1:5335
+
+  fallback-filter:
+    geoip: true
+    ipcidr:
+      - 240.0.0.0/4
+
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+
+# ==================== 流量嗅探（完全保留） ====================
+sniffer:
+  enable: true
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: true
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443, 8443]
+  skip-domain:
+    - "+.push.apple.com"
+
+rule-providers:
+  openai:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/openai.yaml"
+    path: ./ruleset/openai.yaml
+    interval: 86400
+
+  geosite_cn:
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/cn.yaml"
+    path: ./ruleset/geosite_cn.yaml
+    interval: 86400
+——————————————————————————————————————————————————————————————————————————————
+
+# ==================== 基础配置 ====================
+port: 7890
+socks-port: 7891
+mode: rule
+log-level: info                     # 可根据需要调整为 error
+external-controller: 0.0.0.0:9090
+external-ui: /usr/local/etc/clash/ui
+secret: 123456                      # 如需认证，保留此行
+
+# ==================== TUN 模式 ====================
+# 启用 TUN，但不劫持 DNS（由 AdGuardHome / MosDNS 接管入口）
+tun:
+  enable: true
+  stack: system
+  device: tun_3000
+  mtu: 9000
+  auto-route: true
+  strict-route: false               # 避免路由卡死
+  auto-detect-interface: true
+  # dns-hijack 已删除，DNS 劫持由 AdGuardHome 完成
+
+# ==================== DNS 配置 ====================
+dns:
+  enable: true
+  listen: 0.0.0.0:7853              # MosDNS 将国外域名查询发到此端口
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.0/16
+  fake-ip-persist: true             # 防止重启后映射丢失
+  respect-rules: true
+  use-hosts: true
+  use-system-hosts: false
+
+  # 节点解析（国内 DNS，直连）
+  proxy-server-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+
+  # 国外 DNS：使用 DoH（直接 IP 形式，避免解析泄露）
+  nameserver:
+    - https://1.1.1.1/dns-query     # Cloudflare DoH
+    - https://8.8.8.8/dns-query     # Google DoH
+    - https://208.67.222.222/dns-query # OpenDNS DoH
+
+  # fallback 可省略，但保留作为补充（仍使用 DoH）
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+
+  # fallback 过滤（仅用于国内 IP 跳过 fallback，避免污染）
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+
+  # 基础解析（国内 DNS，直连）
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+————————————————————————————————————————————————————————————————————————————————————————
+# 基础端口（你自定义的，完全保留）
+port: 7890
+socks-port: 7891
+mode: rule
+log-level: error
+external-controller: '0.0.0.0:9090'
+external-ui: /usr/local/etc/clash/ui
+
+# TUN 模式 ✅ 保留代理功能，❌ 彻底关闭 DNS 劫持
+tun:
+  enable: true
+  stack: system
+  device: tun_3000
+  mtu: 9000
+  auto-route: true
+  strict-route: true
+  auto-detect-interface: true
+  # --------------------------
+  # 👇 这里清空了！关闭 DNS 劫持
+  # dns-hijack: 已删除
+  # --------------------------
+
+# DNS 配置（专供 MosDNS 调用，不变）
+dns:
+  enable: true
+  listen: 0.0.0.0:7853
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.0/16
+  respect-rules: true
+
+  # 节点解析
+  proxy-server-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+
+  # 境外 DNS（走代理）
+  nameserver:
+    - https://cloudflare-dns.com/dns-query
+    - https://dns.google/dns-query
+
+  # 基础解析
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
