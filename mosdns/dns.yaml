@@ -25,7 +25,7 @@ plugins:
         - addr: "https://dns.alidns.com/dns-query"
           dial_addr: "223.6.6.6"
         - addr: "tls://dns.alidns.com"
-          dial_addr: "2400:3200:baba::1"
+          #dial_addr: "2400:3200:baba::1"
           enable_pipeline: false # ali dot 不支持 pipeline
         - addr: "tls://dns.alidns.com"
           dial_addr: "223.5.5.5"
@@ -34,7 +34,7 @@ plugins:
           dial_addr: "223.5.5.5"
           enable_http3: true
         - addr: "https://dns.alidns.com/dns-query"
-          dial_addr: "2400:3200::1"
+          #dial_addr: "2400:3200::1"
           enable_http3: true
         # dnspod doh dot
         - addr: "https://doh.pub/dns-query"
