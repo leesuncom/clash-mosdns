@@ -44,26 +44,32 @@ plugins:
           dial_addr: "223.5.5.5"
           enable_http3: true
 
-  # ===================== 境外 DNS 上游（全走 Clash 代理，防污染）=====================
-  - tag: forward_remote
+  # ===================== 境外 DNS 上游（二选一核心配置）=====================
+  # Clash DNS 上游（7853端口）
+  - tag: clash_dns
     type: forward
     args:
-      concurrent: 3
       upstreams:
-        - tag: cloudflare_doh
-          addr: "https://cloudflare-dns.com/dns-query"
+        - addr: "udp://127.0.0.1:7853"
           enable_pipeline: true
-          #idle_timeout: 10
-        - tag: google_doh
-          addr: "https://dns.google/dns-query"
+
+  # 原 DNScrypt 上游（5353端口）
+  - tag: dnscrypt_plugin_udp
+    type: forward
+    args:
+      upstreams:
+        - addr: "udp://127.0.0.1:5353"
           enable_pipeline: true
-          #idle_timeout: 10 
-        - tag: dnscrypt_plugin_udp
-          addr: "udp://127.0.0.1:5353"
-          enable_pipeline: true
-          # idle_timeout: 15
-#           bootstrap: 223.5.5.5 #bootstrap地址负责解析doh域名 只能udp
-#           bootstrap_version: 4 #解析的doh域名返回ipv4还是v6
+
+
+  # 新增：OpenClash超时自动切DNSCrypt的降级插件
+  - tag: forward_remote
+    type: fallback
+    args:
+      primary: clash_dns    # 优先走OpenClash DNS
+      secondary: dnscrypt_plugin_udp   # 超时后走DNSCrypt
+      threshold: 3000               # 超时阈值：3000ms（3秒）
+      always_standby: true         # 非预启动，仅超时触发降级
 
   # ===================== 解析序列（优化后）=====================
   - tag: remote_sequence
