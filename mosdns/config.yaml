@@ -1,9 +1,9 @@
 log:
-  level: info
+  level: debug
   file: "/var/log/mosdns.log"
 
 api:
-  http: "127.0.0.1:9091" # api 监听地址
+  http: "127.0.0.1:8338" # API 监听地址
 
 include:
   - "/usr/local/etc/mosdns/dat_exec.yaml"
@@ -11,7 +11,7 @@ include:
 
 plugins:
   ################ 查询序列 #################
-  # cn 域名查询【防泄漏强化：国内域名必须返回国内IP，否则丢弃】
+  # CN 域名查询【防泄漏+重试】
   - tag: query_cn
     type: sequence
     args:
@@ -21,8 +21,12 @@ plugins:
         exec: return
       - matches: qname $whitelist
         exec: return
-      - matches: "!resp_ip $geoip_cn" # 核心防泄漏：国内域名解析出国外IP
-        exec: drop_resp # 直接丢弃，杜绝泄漏
+      # 解析出非国内IP时，重试一次国内DNS
+      - matches: "!resp_ip $geoip_cn"
+        exec: $forward_domestic
+      # 重试后仍非国内IP则丢弃
+      - matches: "!resp_ip $geoip_cn"
+        exec: drop_resp
       - matches: "!has_resp"
         exec: reject 2
 
@@ -37,18 +41,18 @@ plugins:
       - matches: "!has_resp"
         exec: reject 2
 
-  # 非 cn 域名查询【防泄漏：境外域名返回国内IP直接丢弃】
+  # 非 CN 域名查询【防泄漏：境外域名返回国内IP直接丢弃】
   - tag: query_nocn
     type: sequence
     args:
       - exec: $no_ecs
-      - exec: $fallback_nocn
-      - matches: "resp_ip $geoip_cn" # 境外域名解析出国内IP = 泄漏
+      - exec: $fallback_openclash_dnscrypt
+      - matches: "resp_ip $geoip_cn" # 境外域名解析出国内IP = 污染/泄漏
         exec: mark 10
       - matches: mark 10
         exec: query_summary drop_nocn
       - matches: mark 10
-        exec: drop_resp # 丢弃污染/泄漏结果
+        exec: drop_resp
       - matches: "!has_resp"
         exec: reject 2
 
@@ -110,6 +114,9 @@ plugins:
   - tag: pre_sequence
     type: sequence
     args:
+      - exec: query_summary pre_sequence_start
+      - matches: "!has_resp"
+        exec: query_summary pre_sequence_no_resp
       # 屏蔽非法DNS请求，杜绝泄漏通道
       - matches: qtype 65
         exec: reject 3
@@ -120,28 +127,25 @@ plugins:
       # 黑名单域名直接拒绝
       - matches: qname $blocklist
         exec: reject 5
-
       # Hosts 优先
       - exec: $hosts
       - exec: jump has_resp_pre
       - exec: $redirect
       - exec: jump has_resp_pre
-
       # 私网PTR查询强制本地，严防内网泄漏
       - matches:
-        - "qtype 12"
-        - "ptr_ip $geoip_private"
+          - "qtype 12"
+          - "ptr_ip $geoip_private"
         exec: $query_lan
       - exec: jump has_resp_pre
 
-  # main_sequence 分流【无任何泄漏旁路】
+  # 主分流序列【无任何泄漏旁路】
   - tag: main_sequence
     type: sequence
     args:
-      # 缓存优先：命中则直接返回，未命中则继续
+      # 缓存优先
       - exec: $cache_dns
       - exec: jump has_resp_main
-
       # DDNS/白名单/国内域名 → 国内DNS
       - matches: qname $ddnslist
         exec: $query_cn
@@ -152,7 +156,6 @@ plugins:
       - matches: qname $geosite_cn
         exec: $query_cn
       - exec: jump has_resp_main
-
       # GFW/境外域名 → Clash/DNSCrypt
       - matches: qname $geosite_gfw
         exec: $query_gfw
@@ -160,8 +163,7 @@ plugins:
       - matches: qname $geosite_location-!cn
         exec: $query_nocn
       - exec: jump has_resp_main
-
-      # 最终漏网之鱼 → 仅走Clash/DNSCrypt
+      # 最终漏网之鱼 → 仅走代理DNS
       - exec: $query_other_main
       - exec: jump has_resp_main
 
