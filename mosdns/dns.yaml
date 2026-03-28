@@ -93,26 +93,7 @@ plugins:
     args:
       - exec: ttl 3600-86400
 
-  ################# 回滚机制（用于查询非cn域名） ################
-  # fallback 的备份序列，进入此序列就假设代理服务器宕机
-  - tag: seq_backup
-    type: sequence
-    args:
-      - exec: query_summary oversea_failure # 日志
-      - exec: $forward_dnscrypt
-      - matches: has_resp # 有结果就马上返回，不做污染判断
-        exec: accept
-      - matches: "!has_resp"  # 连国内DNS也不响应就说明网络不通
-        exec: reject 2
   
-  - tag: fallback_nocn
-    type: fallback
-    args:
-      primary: fallback_openclash_dnscrypt  # 替换：优先走降级插件（OpenClash→DNSCrypt）
-      secondary: seq_backup
-      threshold: 5000
-      always_standby: false # 等待5s若国外DNS无响应就启用国内DNS
-
   ################# 其他插件 ################
   # 附加 ecs cn 信息
   - tag: ecs_cn
