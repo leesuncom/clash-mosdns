@@ -1,9 +1,9 @@
 log:
-  level: debug
+  level: info
   file: "/var/log/mosdns.log"
 
 api:
-  http: "127.0.0.1:8338" # API 监听地址
+  http: "127.0.0.1:9091" # api 监听地址
 
 include:
   - "/usr/local/etc/mosdns/dat_exec.yaml"
@@ -11,52 +11,34 @@ include:
 
 plugins:
   ################ 查询序列 #################
-  # CN 域名查询【防泄漏+重试】
+  # cn 域名查询
   - tag: query_cn
     type: sequence
     args:
       - exec: $ecs_cn
       - exec: $forward_domestic
-      - matches: qname $ddnslist
-        exec: return
-      - matches: qname $whitelist
-        exec: return
-      # 解析出非国内IP时，重试一次国内DNS
-      - matches: "!resp_ip $geoip_cn"
-        exec: $forward_domestic
-      # 重试后仍非国内IP则丢弃
-      - matches: "!resp_ip $geoip_cn"
-        exec: drop_resp
-      - matches: "!has_resp"
-        exec: reject 2
 
-  # GFW 域名查询【防泄漏：仅走Clash/DNSCrypt】
+  # GFW 域名查询
   - tag: query_gfw
     type: sequence
     args:
       - exec: $no_ecs
-      - exec: $fallback_openclash_dnscrypt
-      - matches: has_resp
-        exec: accept
-      - matches: "!has_resp"
-        exec: reject 2
+      - exec: $forward_overseas_auto  # 智能切换境外DNS
 
-  # 非 CN 域名查询【防泄漏：境外域名返回国内IP直接丢弃】
+  # 非 cn 域名查询
   - tag: query_nocn
     type: sequence
     args:
       - exec: $no_ecs
-      - exec: $fallback_openclash_dnscrypt
-      - matches: "resp_ip $geoip_cn" # 境外域名解析出国内IP = 污染/泄漏
+      - exec: $fallback_nocn
+      - matches: "resp_ip $geoip_cn" # 响应存在 cn ip
         exec: mark 10
       - matches: mark 10
-        exec: query_summary drop_nocn
+        exec: query_summary drop_nocn # 日志
       - matches: mark 10
-        exec: drop_resp
-      - matches: "!has_resp"
-        exec: reject 2
+        exec: drop_resp # 丢弃
 
-  # 本地域名查询【防泄漏：私网域名绝不走公网DNS】
+  # 本地域名查询
   - tag: query_lan
     type: sequence
     args:
@@ -69,26 +51,24 @@ plugins:
     args:
       - exec: $no_ecs
       - exec: $forward_domestic
-      - exec: query_summary query_other_pre
+      - exec: query_summary query_other_pre # 日志
 
-  # 漏网之鱼【防泄漏：仅走Clash/DNSCrypt，无国内旁路】
+  # 漏网之鱼
   - tag: query_other_main
     type: sequence
     args:
       - exec: $no_ecs
-      - exec: $fallback_openclash_dnscrypt
-      - exec: query_summary query_other_main
-      - matches: has_resp
-        exec: accept
-      - matches: "!has_resp"
-        exec: reject 2
+      - exec: $forward_overseas_auto  # 智能切换境外DNS
+      - exec: query_summary query_other_main # 日志
 
   ################ 解析结果处理序列 #################
+  # 预处理序列
   - tag: pre_handle
     type: sequence
     args:
-      - exec: accept
+      - exec: accept # 接受响应,终止流程
 
+  # 主序列
   - tag: main_handle
     type: sequence
     args:
@@ -96,85 +76,85 @@ plugins:
         exec: ttl 5-5
       - matches: "!qname $ddnslist"
         exec: $ttl_modify
-      - exec: accept
+      - exec: accept # 接受响应,终止流程
 
+  # pre_sequence 结果处理
   - tag: has_resp_pre
     type: sequence
     args:
-      - matches: has_resp
+      - matches: has_resp # 如果 pre 序列已有响应
         exec: goto pre_handle
 
+  # main_sequence 结果处理
   - tag: has_resp_main
     type: sequence
     args:
       - matches: has_resp
         exec: goto main_handle
 
-  ################ 主程序【顶级防泄漏预处理】 #################
+  ################ 主程序 #################
+  # pre_sequence
   - tag: pre_sequence
     type: sequence
     args:
-      - exec: query_summary pre_sequence_start
-      - matches: "!has_resp"
-        exec: query_summary pre_sequence_no_resp
-      # 屏蔽非法DNS请求，杜绝泄漏通道
-      - matches: qtype 65
+      - matches: qtype 65 # TYPE 65 类型|DNS服务器状态，拒绝该类型可避免某些 IOS 应用无法上网。
         exec: reject 3
-      - matches: "qname keyword::"
+      - matches: "qname keyword::" # 无效域名
         exec: reject 3
-      - matches: qtype 0
-        exec: reject 3
-      # 黑名单域名直接拒绝
-      - matches: qname $blocklist
+      - matches: qname $blocklist # 黑名单
         exec: reject 5
-      # Hosts 优先
-      - exec: $hosts
+
+      - exec: $hosts  # hosts
       - exec: jump has_resp_pre
-      - exec: $redirect
+      - exec: $redirect # redirect
       - exec: jump has_resp_pre
-      # 私网PTR查询强制本地，严防内网泄漏
-      - matches:
-          - "qtype 12"
-          - "ptr_ip $geoip_private"
+
+      - matches: # 本地 PTR
+        - "qtype 12"
+        - "ptr_ip $geoip_private"
         exec: $query_lan
       - exec: jump has_resp_pre
 
-  # 主分流序列【无任何泄漏旁路】
+      - matches: # 其他类型的DNS查询走国内DNS
+        - "!qtype 1"
+        - "!qtype 28"
+        exec: $query_other_pre
+      - exec: jump has_resp_pre
+
+  # main_sequence（核心：顶部启用全局缓存）
   - tag: main_sequence
     type: sequence
     args:
-      # 缓存优先
-      - exec: $cache_dns
+      - exec: $cache_dns  # ✅ 全局启用DNS缓存
       - exec: jump has_resp_main
-      # DDNS/白名单/国内域名 → 国内DNS
-      - matches: qname $ddnslist
+
+      - matches: qname $ddnslist  # ddns
         exec: $query_cn
       - exec: jump has_resp_main
-      - matches: qname $whitelist
+      - matches: qname $whitelist # 白名单
         exec: $query_cn
       - exec: jump has_resp_main
-      - matches: qname $geosite_cn
+      - matches: qname $geosite_cn # cn 域名
         exec: $query_cn
       - exec: jump has_resp_main
-      # GFW/境外域名 → Clash/DNSCrypt
-      - matches: qname $geosite_gfw
+      - matches: qname $geosite_gfw # GFW 域名
         exec: $query_gfw
       - exec: jump has_resp_main
-      - matches: qname $geosite_location-!cn
+      - matches: qname $geosite_location-!cn # 非 cn 域名
         exec: $query_nocn
       - exec: jump has_resp_main
-      # 最终漏网之鱼 → 仅走代理DNS
+
+      # 域名漏网之鱼全部进入智能境外DNS
       - exec: $query_other_main
       - exec: jump has_resp_main
 
-  # 主入口
   - tag: sequence
     type: sequence
     args:
-      - exec: $pre_sequence
-      - exec: $main_sequence
+      - exec: $pre_sequence # 预处理
+      - exec: $main_sequence # 主执行序列
 
-  # 服务端口
+  # 监听端口 5335（不变）
   - type: udp_server
     args:
       entry: sequence

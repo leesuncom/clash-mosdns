@@ -45,6 +45,10 @@ plugins:
     type: forward
     args:
       upstreams:
+        - tag: clash_udp
+          addr: "udp://127.0.0.1:7853"
+          enable_pipeline: true
+
         - tag: dnscrypt_plugin_udp
           addr: "udp://127.0.0.1:5353"
           enable_pipeline: true

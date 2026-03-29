@@ -4,7 +4,7 @@ plugins:
     args:
       size: 4194304
       lazy_cache_ttl: 3600 
-      dump_file: /var/db/mosdns.cache
+      dump_file: /usr/local/etc/mosdns/cache.dump
       dump_interval: 7200
 
   - tag: redirect
@@ -34,12 +34,6 @@ plugins:
     args:
       files:
         - "/usr/local/etc/mosdns/rule/hosts_akamai.txt"
-
-  - tag: geosite_ads-all # 广告域名
-    type: domain_set
-    args:
-      files:
-        - "/usr/local/etc/mosdns/rule/geosite_category-ads-all.txt"
 
   - tag: geosite_cn # 国内域名
     type: domain_set
