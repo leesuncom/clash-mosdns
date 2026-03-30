@@ -1,3 +1,60 @@
+————————————————————————ok______________________________________-----------------------------------------------
+# 客户端 → OPNsense 53端口 → Clash:7853 → AdGuardHome:535 → MosDNS5335-（ok）
+# 基础配置
+port: 7890
+socks-port: 7891
+mode: rule
+log-level: info
+external-controller: '127.0.0.1:9090'
+
+# -----------------------
+# 旁路由必须开 TUN！！！
+# -----------------------
+tun:
+  enable: true
+  stack: system
+  device: tun_3000
+  mtu: 1500
+  auto-route: true
+  strict-route: false
+  auto-detect-interface: true
+  dns-hijack: []
+
+# DNS 配置（正确）
+dns:
+  enable: true
+  listen: 0.0.0.0:7853
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.0/16
+  use-hosts: false
+  respect-rules: true
+
+  proxy-server-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+
+  nameserver:
+    - 127.0.0.1:535
+
+# 流量嗅探
+sniffer:
+  enable: true
+  sniff:
+    HTTP:
+      ports: [80, 8080, 8443, 8880]
+      override-destination: true
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443, 8443]
+  skip-domain:
+    - "+.push.apple.com"
+    - "+.apple.com"
+    - "+.icloud.com"
+    - "+.microsoft.com"
+    - "+.local"       # 防止嗅探内网设备
+    - "router.local"  # 你的路由器后台
+——————————————————————————————————ok————————————————————————————————————————————————————————
 # 基础代理配置（保留）
 port: 7890
 socks-port: 7891
@@ -174,9 +231,7 @@ dns:
   listen: 0.0.0.0:7853
 
   nameserver:
-    - 127.0.0.1:5335                # MosDNS监听地址（不变）
-
-
+    - 127.0.0.1:5335                # MosDNS监听地址（不变
 
   default-nameserver:
     - 223.5.5.5
