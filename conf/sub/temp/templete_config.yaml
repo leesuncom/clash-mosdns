@@ -1,71 +1,38 @@
-# 方案1：AdGuard Home(53) → MosDNS(5300) → Clash(7853) 防DNS泄露终极配置
-#网络流向：客户端 → AdGuard Home (53 端口) → MosDNS (5300) → Clash (5333) → 加密 DNS (国内外分流)
-#核心配置要点：
-#AdGuard Home：监听 53 端口，关闭自身缓存，上游设置为 MosDNS，启用广告过滤和家长控制
-#MosDNS：负责 GeoIP/GeoSite 分流，国内域名走阿里云 / 腾讯云 DOH，国外域名走 Clash 代理的 Cloudflare/Google DOH
-#Clash：启用 TUN 模式和 Fake-IP，关闭 DNS 劫持，上游设置为加密 DNS，确保国外 DNS 请求必走代理
-
+# 客户端 → AdGuardHome:53（5335mosdns） → MosDNS:5335(国外DNSCrypt-Proxy5353) → Clash:7853（上游5335）
+# 基础配置
 port: 7890
 socks-port: 7891
 mode: rule
-log-level: error
-external-controller: 0.0.0.0:9090
-external-ui: /usr/local/etc/clash/ui
-# secret: 123456
+log-level: info
+external-controller: '127.0.0.1:9090'
 
+# 旁路由必须开 TUN！！！
 tun:
   enable: true
-  stack: system
+  stack: mixed  # system
   device: tun_3000
   mtu: 9000
   auto-route: true
-  strict-route: false
+  strict-route: true #让 Clash TUN 强行接管设备所有流量，任何流量都不准绕过 Clash
   auto-detect-interface: true
+  dns-hijack:
+    - any:53
+    - tcp://any:53
 
+# DNS 配置（正确）
 dns:
   enable: true
   listen: 0.0.0.0:7853
   ipv6: false
   enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.0/16
-  fake-ip-persist: true
-  respect-rules: true
-  use-hosts: true
-  use-system-hosts: false
-
-  # 🔥 国内域名 不使用 Fake-IP（保证淘宝/微信/银行正常访问）
-  fake-ip-filter:
-    - rule-set:geosite_cn
-
-  # 代理节点解析（国内直连）
+  fake-ip-range: 198.18.0.1/16
+  use-hosts: false
+  respect-rules: false
   proxy-server-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
+    - https://doh.pub/dns-query
 
-  # 境外加密DNS（走代理）
   nameserver:
-    - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
-
-  # 🔥 必须保留：国内IP 不走境外DNS，防污染/劫持
-  fallback-filter:
-    geoip: true
-    geoip-code: CN
-    ipcidr:
-      - 240.0.0.0/4
-
-  # 基础解析DNS
-  default-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
-
-# 🔥 国内域名规则集（配合 fake-ip-filter 使用）
-rule-providers:
-  geosite_cn:
-    type: http
-    behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/cn.yaml"
-    path: ./ruleset/geosite_cn.yaml
-    interval: 86400
+    - 127.0.0.1:5335   # 指向 MosDNS，绝对不能指回 MosDNS，关闭嗅探以防止潜在的循环
+#    - 127.0.0.1:5353   # 指向 DNSCrypt，绝对不能指回 MosDNS，adg都绕过
 
 
