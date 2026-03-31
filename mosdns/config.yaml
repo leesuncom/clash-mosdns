@@ -55,12 +55,13 @@ plugins:
     args:
       files:
         - /usr/local/etc/mosdns/rule/redirect.txt
-  - tag: adlist
-    type: domain_set
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/geosite_category-ads-all.txt
-        - /usr/local/etc/mosdns/rule/anti-ad-domains.txt
+  # 👇 已注释：广告域名列表（禁用广告加载）
+  # - tag: adlist
+  #   type: domain_set
+  #   args:
+  #     files:
+  #       - /usr/local/etc/mosdns/rule/geosite_category-ads-all.txt
+  #       - /usr/local/etc/mosdns/rule/anti-ad-domains.txt
   - tag: local_ptr
     type: domain_set
     args:
@@ -79,7 +80,7 @@ plugins:
     args:
       size: 8000
       lazy_cache_ttl: 86400
-      dump_file: /etc/mosdns/cache.dump
+      dump_file: /usr/local/etc/mosdns/cache.dump
       dump_interval: 3600
   - tag: forward_local
     type: forward
@@ -194,8 +195,9 @@ plugins:
     args:
       - matches: qname $blocklist
         exec: reject 3
-      - matches: qname $adlist
-        exec: reject 3
+      # 👇 已注释：广告域名拦截规则（禁用广告拦截）
+      # - matches: qname $adlist
+      #   exec: reject 3
       - matches:
           - qtype 12
           - qname $local_ptr
@@ -212,10 +214,11 @@ plugins:
     args:
       - exec: $hosts
       - exec: jump has_resp_sequence
+      # 👇 已注释：广告域名排除缓存（恢复广告域名正常缓存）
       - matches:
           - '!qname $ddnslist'
           - '!qname $blocklist'
-          - '!qname $adlist'
+          # - '!qname $adlist'
           - '!qname $local_ptr'
         exec: $lazy_cache
       - exec: jump has_resp_sequence
