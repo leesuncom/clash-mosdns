@@ -1,0 +1,165 @@
+log:
+  level: info
+  file: "/var/log/mosdns.log"
+
+api:
+  http: "127.0.0.1:9091" # api 监听地址
+
+include:
+  - "/usr/local/etc/mosdns/dat_exec.yaml"
+  - "/usr/local/etc/mosdns/dns.yaml"
+
+plugins:
+  ################ 查询序列 #################
+  # cn 域名查询
+  - tag: query_cn
+    type: sequence
+    args:
+      - exec: $ecs_cn
+      - exec: $forward_domestic
+
+  # GFW 域名查询
+  - tag: query_gfw
+    type: sequence
+    args:
+      - exec: $no_ecs
+      - exec: $forward_overseas_auto  # 智能切换境外DNS
+
+  # 非 cn 域名查询
+  - tag: query_nocn
+    type: sequence
+    args:
+      - exec: $no_ecs
+      - exec: $fallback_nocn
+      - matches: "resp_ip $geoip_cn" # 响应存在 cn ip
+        exec: mark 10
+      - matches: mark 10
+        exec: query_summary drop_nocn # 日志
+      - matches: mark 10
+        exec: drop_resp # 丢弃
+
+  # 本地域名查询
+  - tag: query_lan
+    type: sequence
+    args:
+      - exec: $no_ecs
+      - exec: $forward_local
+
+  # 其他类型查询
+  - tag: query_other_pre
+    type: sequence
+    args:
+      - exec: $no_ecs
+      - exec: $forward_domestic
+      - exec: query_summary query_other_pre # 日志
+
+  # 漏网之鱼
+  - tag: query_other_main
+    type: sequence
+    args:
+      - exec: $no_ecs
+      - exec: $forward_overseas_auto  # 智能切换境外DNS
+      - exec: query_summary query_other_main # 日志
+
+  ################ 解析结果处理序列 #################
+  # 预处理序列
+  - tag: pre_handle
+    type: sequence
+    args:
+      - exec: accept # 接受响应,终止流程
+
+  # 主序列
+  - tag: main_handle
+    type: sequence
+    args:
+      - matches: qname $ddnslist
+        exec: ttl 5-5
+      - matches: "!qname $ddnslist"
+        exec: $ttl_modify
+      - exec: accept # 接受响应,终止流程
+
+  # pre_sequence 结果处理
+  - tag: has_resp_pre
+    type: sequence
+    args:
+      - matches: has_resp # 如果 pre 序列已有响应
+        exec: goto pre_handle
+
+  # main_sequence 结果处理
+  - tag: has_resp_main
+    type: sequence
+    args:
+      - matches: has_resp
+        exec: goto main_handle
+
+  ################ 主程序 #################
+  # pre_sequence
+  - tag: pre_sequence
+    type: sequence
+    args:
+      - matches: qtype 65 # TYPE 65 类型|DNS服务器状态，拒绝该类型可避免某些 IOS 应用无法上网。
+        exec: reject 3
+      - matches: "qname keyword::" # 无效域名
+        exec: reject 3
+      - matches: qname $blocklist # 黑名单
+        exec: reject 5
+
+      - exec: $hosts  # hosts
+      - exec: jump has_resp_pre
+      - exec: $redirect # redirect
+      - exec: jump has_resp_pre
+
+      - matches: # 本地 PTR
+        - "qtype 12"
+        - "ptr_ip $geoip_private"
+        exec: $query_lan
+      - exec: jump has_resp_pre
+
+      - matches: # 其他类型的DNS查询走国内DNS
+        - "!qtype 1"
+        - "!qtype 28"
+        exec: $query_other_pre
+      - exec: jump has_resp_pre
+
+  # main_sequence（核心：顶部启用全局缓存）
+  - tag: main_sequence
+    type: sequence
+    args:
+      - exec: $cache_dns  # ✅ 全局启用DNS缓存
+      - exec: jump has_resp_main
+
+      - matches: qname $ddnslist  # ddns
+        exec: $query_cn
+      - exec: jump has_resp_main
+      - matches: qname $whitelist # 白名单
+        exec: $query_cn
+      - exec: jump has_resp_main
+      - matches: qname $geosite_cn # cn 域名
+        exec: $query_cn
+      - exec: jump has_resp_main
+      - matches: qname $geosite_gfw # GFW 域名
+        exec: $query_gfw
+      - exec: jump has_resp_main
+      - matches: qname $geosite_location-!cn # 非 cn 域名
+        exec: $query_nocn
+      - exec: jump has_resp_main
+
+      # 域名漏网之鱼全部进入智能境外DNS
+      - exec: $query_other_main
+      - exec: jump has_resp_main
+
+  - tag: sequence
+    type: sequence
+    args:
+      - exec: $pre_sequence # 预处理
+      - exec: $main_sequence # 主执行序列
+
+  # 监听端口 5335（不变）
+  - type: udp_server
+    args:
+      entry: sequence
+      listen: :5335
+  - type: tcp_server
+    args:
+      entry: sequence
+      listen: :5335

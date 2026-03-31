@@ -12,7 +12,7 @@ plugins:
     type: ecs_handler
     args:
       forward: false
-      preset: 151.101.196.0
+      preset: 151.101.48.0
       send: false
       mask4: 22
 
@@ -71,13 +71,13 @@ plugins:
     args:
       concurrent: 2
       upstreams:
-        - addr: "tls://1.1.1.1:853" # Cloudflare DoT（补充标准端口 853）
-          dial_addr: "1.1.1.1"
-        - addr: "https://cloudflare-dns.com/dns-query" # Cloudflare DoH
-          dial_addr: "1.0.0.1"
-          enable_http3: true
         - addr: "udp://127.0.0.1:5353" # 本地代理 DNS 兜底
           enable_pipeline: true
+#        - addr: "tls://1.1.1.1:853" # Cloudflare DoT（补充标准端口 853）
+#          dial_addr: "1.1.1.1"
+#        - addr: "https://cloudflare-dns.com/dns-query" # Cloudflare DoH
+#          dial_addr: "1.0.0.1"
+#          enable_http3: true
 
   # ===================== 解析序列（修复语法错误）=====================
   # 国内域名解析序列
