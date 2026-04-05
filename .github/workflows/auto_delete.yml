@@ -49,13 +49,13 @@ jobs:
 
           echo "keep_releases=${keep_releases[@]}" >> $GITHUB_ENV
 
-      - name: Ensure total releases do not exceed 100
+      - name: Ensure total releases do not exceed 5
         id: ensure_total_releases
         run: |
           keep_releases=(${{ env.keep_releases }})
           total_releases=$(wc -l < releases.txt)
-          if [ $total_releases -gt 100 ]; then
-            excess_releases=$(($total_releases - 100))
+          if [ $total_releases -gt 5 ]; then
+            excess_releases=$(($total_releases - 5))
             old_releases=$(tail -n $excess_releases releases.txt | awk '{print $1}')
             for release_tag in $old_releases; do
               if [[ ! " ${keep_releases[@]} " =~ " ${release_tag} " ]]; then
