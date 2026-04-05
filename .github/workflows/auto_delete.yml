@@ -71,7 +71,7 @@ jobs:
       - name: Limit total releases to MAX 100
         run: |
           total=$(gh release list --limit 1000 | wc -l)
-          if (( total > 100 )); then
+          if (( total > 5 )); then
             echo "⚠️ 当前总数 $total，超过100，清理最旧的 $((total-100)) 个"
             gh release list --limit 1000 | tail -n +101 | awk '{print $1}' | while read tag; do
               gh release delete "$tag" -y 2>/dev/null || true
