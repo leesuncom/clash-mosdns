@@ -2,14 +2,14 @@ name: auto_delete
 
 on:
   schedule:
-    - cron: '0 2 10 * *'  # 每月10号 02:00 执行
-  workflow_dispatch:       # 支持手动触发
+    - cron: '0 2 10 * *'
+  workflow_dispatch:
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 必须加：允许删除 release 和 tag
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -27,28 +27,41 @@ jobs:
 
       - name: Determine releases to KEEP
         run: |
+          set -euo pipefail
           current_month=$(date +'%Y-%m')
-          declare -A keep_tags  # 用哈希表避免重复
-          
-          # 遍历所有 release
+          # 改用普通数组 + 循环去重，避免哈希表兼容性问题
+          keep_list=()
+
           while IFS= read -r line; do
             [ -z "$line" ] && continue
             tag=$(echo "$line" | awk '{print $1}')
             rel_date=$(echo "$line" | awk '{print $3}')
             rel_month=$(date -d "$rel_date" +'%Y-%m' 2>/dev/null || echo "invalid")
-            
-            # 规则1：保留本月所有发布
+
             if [[ "$rel_month" == "$current_month" ]]; then
-              keep_tags["$tag"]=1
-            else
-              # 规则2：保留非本月的【每个月最后一个】
+              # 规则1：保留本月所有发布
+              keep_list+=("$tag")
+            elif [[ "$rel_month" != "invalid" ]]; then
+              # 规则2：非本月，取该月最后一个发布
               last_tag=$(grep "$rel_month" releases.txt | tail -n1 | awk '{print $1}')
-              keep_tags["$last_tag"]=1
+              # 只有非空才加入
+              if [ -n "$last_tag" ]; then
+                keep_list+=("$last_tag")
+              fi
             fi
           done < releases.txt
 
-          # 导出保留列表
-          KEEP_LIST=$(echo "${!keep_tags[@]}" | tr ' ' '\n' | sort | tr '\n' ' ')
+          # 数组去重
+          declare -A seen
+          unique_keep=()
+          for tag in "${keep_list[@]}"; do
+            if [ -z "${seen[$tag]-}" ]; then
+              seen[$tag]=1
+              unique_keep+=("$tag")
+            fi
+          done
+
+          KEEP_LIST="${unique_keep[*]}"
           echo "KEEP_LIST=$KEEP_LIST" >> $GITHUB_ENV
           echo "✅ 保留列表：$KEEP_LIST"
 
@@ -58,8 +71,6 @@ jobs:
           while IFS= read -r line; do
             [ -z "$line" ] && continue
             tag=$(echo "$line" | awk '{print $1}')
-            
-            # 不在保留列表 = 删除
             if [[ ! " ${KEEP_ARR[@]} " =~ " $tag " ]]; then
               echo "🗑️ 删除 release: $tag"
               gh release delete "$tag" -y 2>/dev/null || true
@@ -73,19 +84,17 @@ jobs:
           total=$(gh release list --limit 1000 | wc -l)
           if (( total > 5 )); then
             echo "⚠️ 当前总数 $total，超过100，清理最旧的 $((total-100)) 个"
-            gh release list --limit 1000 | tail -n +101 | awk '{print $1}' | while read tag; do
+            gh release list --limit 1000 | tail -n +101 | awk '{print $1}' | while read -r tag; do
               gh release delete "$tag" -y 2>/dev/null || true
             done
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Delete orphan git tags (安全清理标签)
+      - name: Delete orphan git tags
         run: |
-          # 获取现存有效 release 标签
           valid_tags=$(gh release list --limit 1000 | awk '{print $1}' | sort)
-          # 删除本地+远程无效标签
-          git tag -l | while read tag; do
+          git tag -l | while read -r tag; do
             if ! grep -qxF "$tag" <<< "$valid_tags"; then
               echo "🧹 删除孤儿标签: $tag"
               git tag -d "$tag" || true
