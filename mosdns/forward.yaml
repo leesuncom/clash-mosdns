@@ -71,7 +71,8 @@ plugins:
     args:
       concurrent: 2
       upstreams:
-        - addr: "udp://127.0.0.1:5353" # 本地代理 DNS 兜底
+        - addr: "https://127.0.0.1:7058/dns-query" # 本地代理 DNS 兜底
+#        - addr: "127.0.0.1:5353" # 本地代理 DNS 兜底https://127.0.0.1:7058/dns-query
           enable_pipeline: true
 #        - addr: "tls://1.1.1.1:853" # Cloudflare DoT（补充标准端口 853）
 #          dial_addr: "1.1.1.1"

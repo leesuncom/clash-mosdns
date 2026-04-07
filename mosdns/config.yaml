@@ -1,252 +1,368 @@
 log:
-  level: info
-  file: /var/log/mosdns.log
+  level: debug
+  file: "/var/log/mosdns.log"
+
+# API 入口设置     
 api:
-  http: 0.0.0.0:9091
-include: []
+  http: ":9091" # 在该地址启动 api 接口。
+
+# []string, 从其他配置文件载入 plugins 插件设置。
+# include 的插件会比本配置文件中的插件先初始化。
+include: 
+  - "/usr/local/etc/mosdns/load_rules.yaml"
+  - "/usr/local/etc/mosdns/forward.yaml"
+
 plugins:
-  - tag: geosite_cn
-    type: domain_set
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/geosite_cn.txt
-  - tag: geoip_cn
-    type: ip_set
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/geoip_cn.txt
-  - tag: geosite_apple
-    type: domain_set
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/geosite_apple.txt
-  - tag: geosite_no_cn
-    type: domain_set
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/geosite_geolocation-!cn.txt
-  - tag: whitelist
-    type: domain_set
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/whitelist.txt
-  - tag: blocklist
-    type: domain_set
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/blocklist.txt
-  - tag: greylist
-    type: domain_set
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/greylist.txt
-  - tag: ddnslist
-    type: domain_set
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/ddnslist.txt
-  - tag: hosts
-    type: hosts
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/hosts.txt
-  - tag: redirect
-    type: redirect
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/redirect.txt
-  # 👇 已注释：广告域名列表（禁用广告加载）
-  # - tag: adlist
-  #   type: domain_set
-  #   args:
-  #     files:
-  #       - /usr/local/etc/mosdns/rule/geosite_category-ads-all.txt
-  #       - /usr/local/etc/mosdns/rule/anti-ad-domains.txt
-  - tag: local_ptr
-    type: domain_set
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/local-ptr.txt
-  - tag: stream_media
-    type: domain_set
-    args:
-      files:
-        - /usr/local/etc/mosdns/rule/geosite_disney.txt
-        - /usr/local/etc/mosdns/rule/geosite_netflix.txt
-        - /usr/local/etc/mosdns/rule/geosite_hulu.txt
-        - /usr/local/etc/mosdns/rule/streaming.txt
-  - tag: lazy_cache
-    type: cache
-    args:
-      size: 8000
-      lazy_cache_ttl: 86400
-      dump_file: /usr/local/etc/mosdns/cache.dump
-      dump_interval: 3600
-  - tag: forward_local
-    type: forward
-    args:
-      concurrent: 1
-      upstreams:
-        - addr: https://doh.pub/dns-query
-          bootstrap: 119.29.29.29
-          enable_pipeline: true
-          insecure_skip_verify: false
-          idle_timeout: 30
-  - tag: forward_remote
-    type: forward
-    args:
-      concurrent: 2
-      upstreams:
-        - addr: 127.0.0.1:5353
-  - tag: forward_remote_upstream
+  # IP 优选，需要定期修改，最好填写 2-4 个
+  - tag: blackhole_akamai_ipv4 # 替换部分 AKAMAI 域名 IP，详见 https://github.com/IrineSistiana/mosdns/discussions/489
     type: sequence
     args:
-      - exec: prefer_ipv4
-      - exec: $forward_remote
-  - tag: forward_stream_media
-    type: forward
-    args:
-      concurrent: 2
-      upstreams:
-        - addr: tls://8.8.8.8
-          bootstrap: 119.29.29.29
-          enable_pipeline: true
-          insecure_skip_verify: false
-          idle_timeout: 30
-  - tag: forward_stream_media_upstream
+      - exec: black_hole 119.149.188.15 202.142.229.59 223.44.51.33 # best_akamai_ipv4
+      - exec: ttl 3600-0
+      - exec: accept # 运行 black_hole 之后接受请求，不再进行后续判断
+
+  - tag: blackhole_akamai_ipv6
     type: sequence
     args:
-      - exec: prefer_ipv4
-      - exec: $forward_stream_media
-  - tag: modify_ttl
+      - exec: black_hole 2600:140b:1000::1730:d5ab 2600:140b:1000::1730:d5ce # best_akamai_ipv6
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: blackhole_cachefly_ipv4
     type: sequence
     args:
-      - exec: ttl 300-86400
-  - tag: modify_ddns_ttl
+      - exec: black_hole 205.234.175.0 # best_cachefly_ipv4
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: blackhole_cloudflare_ipv4
     type: sequence
     args:
-      - exec: ttl 5-5
-  - tag: has_resp_sequence
+      - exec: black_hole 104.17.7.198 104.17.61.114 162.159.0.195 162.159.7.75 # best_cloudflare_ipv4
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: blackhole_cloudflare_ipv6
     type: sequence
     args:
-      - matches: qname $ddnslist
-        exec: $modify_ddns_ttl
-      - matches: '!qname $ddnslist'
-        exec: $modify_ttl
-      - matches: has_resp
-        exec: accept
-  - tag: query_is_non_local_ip
+      - exec: black_hole 2a06:98c1:310f::e0c0:131c:2cb3 2a06:98c1:310f::ee3c:1d43:fc2e:6f6c # best_cloudflare_ipv6
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: blackhole_cloudfront_ipv4
+    type: sequence
+    args:
+      - exec: black_hole 18.172.26.139 18.172.28.94 52.84.151.126 52.84.228.48 # best_cloudfront_ipv4
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: blackhole_cloudfront_ipv6
+    type: sequence
+    args:
+      - exec: black_hole 2600:9000:20e9:1edf:3560:977b:c990:1f75 2600:9000:20e9:1edf:35c0:29ed:b6ac:7b3b # best_cloudfront_ipv6
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: blackhole_sucuri_ipv4
+    type: sequence
+    args:
+      - exec: black_hole 192.88.134.24 192.88.134.30 # best_sucuri_ipv4
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: blackhole_ghs_ipv4
+    type: sequence
+    args:
+      - exec: black_hole 142.250.196.243 # best_ghs_ipv4
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: blackhole_ghs_ipv6
+    type: sequence
+    args:
+      - exec: black_hole 2404:6800:4004:821::2013 # best_ghs_ipv6
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: blackhole_cdn77_ipv6
+    type: sequence
+    args:
+      - exec: black_hole ::0 # best_cdn77_ipv6
+      - exec: ttl 3600-0
+      - exec: accept
+
+  - tag: change_cdn_ip_akamai
+    type: sequence
+    args:
+      - matches:
+          - cname akamai.net akamaized.net
+          - qtype 1
+          - has_wanted_ans # 防止纯 IPV6 域名被替换
+        exec: jump blackhole_akamai_ipv4
+      - matches:
+          - cname akamai.net akamaized.net
+          - qtype 28
+          - has_wanted_ans
+        exec: jump blackhole_akamai_ipv6 # 如果不需要对纯 IPV6 域名优选可以去掉这一段
+      - exec: return
+
+  - tag: change_cdn_ip # https://github.com/XIU2/CloudflareSpeedTest/discussions/317
+    type: sequence
+    args:
+      - matches:
+          - cname full:custom.crisp.help pacloudflare.com cc-ecdn.net # Cloudflare Spectrum、Salesforce 不进行替换
+        exec: return
+      - matches:
+          - qtype 1
+          - resp_ip $cloudflare_ipv4
+        exec: jump blackhole_cloudflare_ipv4
+      - matches:
+          - qtype 1
+          - resp_ip $cloudfront_ipv4
+        exec: jump blackhole_cloudfront_ipv4
+      - matches:
+          - qtype 1
+          - cname cloudfront.net
+        exec: jump blackhole_cloudfront_ipv4
+      - matches:
+          - qtype 1
+          - resp_ip $cachefly_ipv4
+        exec: jump blackhole_cachefly_ipv4
+      - matches:
+          - qtype 1
+          - resp_ip $sucuri_ipv4
+        exec: jump blackhole_sucuri_ipv4
+      - matches:
+          - qtype 1
+          - cname full:ghs.googlehosted.com
+        exec: jump blackhole_ghs_ipv4
+      - matches:
+          - qtype 28
+          - resp_ip $cloudflare_ipv6
+        exec: jump blackhole_cloudflare_ipv6
+      - matches:
+          - qtype 28
+          - resp_ip $cloudfront_ipv6
+        exec: jump blackhole_cloudfront_ipv6
+      - matches:
+          - qtype 28
+          - has_wanted_ans
+          - cname cloudfront.net
+        exec: jump blackhole_cloudfront_ipv6
+      - matches:
+          - qtype 28
+          - has_wanted_ans
+          - qname regexp:.+\.rsc\.cdn77\.org$
+        exec: jump blackhole_cdn77_ipv6 # 返回 ::0 屏蔽 ipv6
+      - matches:
+          - qtype 28
+          - has_wanted_ans
+          - cname rsc.cdn77.org
+        exec: jump blackhole_cdn77_ipv6 # 返回 ::0 屏蔽 ipv6
+      - matches:
+          - qtype 28
+          - cname full:ghs.googlehosted.com
+        exec: jump blackhole_ghs_ipv6
+      - exec: return
+
+  - tag: gfw_sequence # 处理 GFW 域名
+    type: sequence
+    args:
+      - exec: jump remote_sequence
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept # 查询失败也会停止，防止后续查询回落到国内上游
+
+  - tag: default_sequence # 默认使用 fallback
+    type: sequence
+    args:
+      - exec: jump remote_sequence
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  - tag: default_sequence_original # 使用 fallback，不替换 CDN IP
+    type: sequence
+    args:
+      - exec: jump remote_sequence
+      - exec: accept
+
+  - tag: banned_sequence
+    type: sequence
+    args:
+      - exec: debug_print "DNS poisoning detected"
+      - exec: jump default_sequence
+
+  - tag: local_sequence
     type: sequence
     args:
       - exec: $forward_local
-      - matches: '!resp_ip $geoip_cn'
-        exec: drop_resp
-      - matches: resp_ip $geoip_cn
-        exec: accept
-  - tag: leak_proof_fallback
-    type: fallback
-    args:
-      primary: forward_remote_upstream
-      secondary: forward_remote_upstream
-      threshold: 500
-      always_standby: true
-  - tag: apple_domain_fallback
-    type: fallback
-    args:
-      primary: query_is_non_local_ip
-      secondary: forward_remote_upstream
-      threshold: 100
-      always_standby: true
-  - tag: query_is_apple_domain
-    type: sequence
-    args:
-      - matches: '!qname $geosite_apple'
-        exec: return
-      - exec: $apple_domain_fallback
-  - tag: query_is_ddns_domain
-    type: sequence
-    args:
-      - matches: qname $ddnslist
-        exec: $forward_local
-  - tag: query_is_local_domain
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  - tag: ali_sequence_ipv4
     type: sequence
     args:
       - exec: prefer_ipv4
-      - matches: qname $geosite_cn
-        exec: $forward_local
-  - tag: query_is_no_local_domain
-    type: sequence
-    args:
-      - matches: qname $geosite_no_cn
-        exec: $forward_remote_upstream
-  - tag: query_is_whitelist_domain
+      # 江苏电信如使用 alidns 请添加其他地区 ECS 否则易跳反诈
+      # - exec: $ecs_shanghai
+      - exec: $forward_alidns
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  - tag: tencent_sequence_ipv4
     type: sequence
     args:
       - exec: prefer_ipv4
-      - matches: qname $whitelist
-        exec: $forward_local
-  - tag: query_is_greylist_domain
+      - exec: $forward_dnspod
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  # 阿里日本准确度高，腾讯美国准确度高
+  - tag: ali_sequence_jp
     type: sequence
     args:
-      - matches: qname $greylist
-        exec: $forward_remote_upstream
-  - tag: query_is_reject_domain
+      - exec: prefer_ipv4
+      - exec: $ecs_jp
+      - exec: $forward_alidns
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  - tag: tencent_sequence_sjc
     type: sequence
     args:
-      - matches: qname $blocklist
-        exec: reject 3
-      # 👇 已注释：广告域名拦截规则（禁用广告拦截）
-      # - matches: qname $adlist
-      #   exec: reject 3
+      - exec: prefer_ipv4
+      - exec: $ecs_sjc
+      - exec: $forward_dnspod
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  - tag: tencent_sequence_lax
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      - exec: $ecs_lax
+      - exec: $forward_dnspod
+      - exec: jump change_cdn_ip_akamai
+      - exec: jump change_cdn_ip
+      - exec: accept
+
+  - tag: main
+    type: sequence
+    args:
       - matches:
-          - qtype 12
-          - qname $local_ptr
-        exec: reject 3
-      - matches: qtype 65
-        exec: reject 3
-  - tag: query_is_stream_media_domain
-    type: sequence
-    args:
-      - matches: qname $stream_media
-        exec: $forward_stream_media_upstream
-  - tag: main_sequence
-    type: sequence
-    args:
+          - qtype 65
+        exec: reject 3 # 屏蔽 QTYPE 65
+
+      - exec: $redirect
       - exec: $hosts
       - exec: jump has_resp_sequence
-      # 👇 已注释：广告域名排除缓存（恢复广告域名正常缓存）
+      - exec: $hosts_fastly
+      - exec: jump has_resp_sequence
+      - exec: $hosts_akamai
+      - exec: jump has_resp_sequence
+
       - matches:
-          - '!qname $ddnslist'
-          - '!qname $blocklist'
-          # - '!qname $adlist'
-          - '!qname $local_ptr'
-        exec: $lazy_cache
+          - qname $privatelist #内网域名
+        exec: reject 5 # 屏蔽内网域名
+        # exec: $forward_lan # 查询内网 DNS
+      # - exec: jump has_resp_sequence
+
+      - matches:
+          - qname $whitelist # DDNS 和其他白名单
+        exec: $forward_local
+      - exec: ttl 5-180
       - exec: jump has_resp_sequence
-      - exec: $redirect
+
+      - matches:
+          - qname $blocklist # 黑名单，可添加去广告列表
+        exec: reject 5
+
+      - exec: $cache_0 # 下面的请求结果均进入缓存
       - exec: jump has_resp_sequence
-      - exec: $query_is_apple_domain
-      - exec: jump has_resp_sequence
-      - exec: $query_is_ddns_domain
-      - exec: jump has_resp_sequence
-      - exec: $query_is_whitelist_domain
-      - exec: jump has_resp_sequence
-      - exec: $query_is_reject_domain
-      - exec: jump has_resp_sequence
-      - exec: $query_is_greylist_domain
-      - exec: jump has_resp_sequence
-      - exec: $query_is_local_domain
-      - exec: jump has_resp_sequence
-      - exec: $query_is_no_local_domain
-      - exec: jump has_resp_sequence
-      - exec: $leak_proof_fallback
-      - exec: jump has_resp_sequence
+
+      - matches:
+          - qname $ipv6list
+        exec: jump remote_sequence_ipv6 # IPV6 域名请求远程 DNS
+
+      - matches:
+          - qname $originallist # 不进行 IP 替换的域名，通常是游戏等使用非常用端口的域名
+        exec: jump default_sequence_original
+
+      - matches:
+          - qname $greylist
+        exec: jump default_sequence # 污染域名请求远程 DNS
+
+      - matches:
+          - qname $jp_dns_list $akamailist
+        exec: jump ali_sequence_jp
+
+      - matches:
+          - qname $us_dns_list
+        exec: jump tencent_sequence_lax # 给了 LAX 和 SJC，自由选择
+
+      - matches:
+          - qname $cdnlist apple.com icloud.com live.com live.net msftconnecttest.com office365.com office.com outlook.com trafficmanager.net xbox.com
+        exec: jump tencent_sequence_ipv4 # 我这里用腾讯 DNS 返回东京电信的概率较高，可以替换成其他。
+
+      - matches:
+          - qname $gfwlist
+        exec: jump gfw_sequence # GFW 域名请求海外 DNS
+
+      - matches:
+          - qname $geosite_cn # 国内域名走运营商 DNS
+        exec: jump local_sequence
+
+      # 策略 1：默认查询国内上游，入返回境外 IP，再次将域名交给可信 DNS 查询。
+      # 江苏电信如使用 alidns 请添加其他地区 ECS 否则易跳反诈
+      # - exec: $ecs_shanghai
+      # - exec: $forward_alidns # 默认使用阿里 DNS
+      # - matches:
+      #     - resp_ip $banned_ip # 记录被污染域名，日后加入 gerylist。
+      #   exec: jump banned_sequence
+      # - matches:
+      #     - resp_ip 61.160.148.90
+      #   exec: debug_print "js96110"
+      # - matches:
+      #     - "resp_ip $geoip_cn"
+      #   exec: accept # 返回国内 IP 直接接受
+      # - exec: jump change_cdn_ip_akamai
+      # - matches: # 有些 AKAMAI 的域名不能直接替换 IP（没有绑定全证书），此处多加一次判断，接受所有 AKAMAI CDN 的 IP。
+      #     - cname $akamailist
+      #   exec: accept
+      # - exec: jump change_cdn_ip
+      # 策略 2：注释上方策略 1 的配置，默认查询可信 DNS，可以避免“DNS 泄露”，对上游稳定性要求更高
+      - exec: jump default_sequence # 其余域名使用可信 DNS
+      - exec: accept
+
   - tag: udp_server
     type: udp_server
     args:
-      entry: main_sequence
-      listen: 0.0.0.0:5335
+      entry: main
+      listen: ":5335"
+
   - tag: tcp_server
     type: tcp_server
     args:
-      entry: main_sequence
-      listen: 0.0.0.0:5335
+      entry: main
+      listen: ":5335"
+      # cert: "/etc/nginx/conf.d/_lan.crt" # 配置 cert 和 key 后会启用 TLS (DoT)。
+      # key: "/etc/nginx/conf.d/_lan.key" 
+      idle_timeout: 10 # 空连接超时。单位秒。默认 10。
+
+  - tag: "http_server"
+    type: "http_server"
+    args:
+      entries:
+        - path: /dns-query     # 本路径执行
+          exec: main # 可执行插件的 tag。
+      src_ip_header: "X-Forwarded-For"  # 从 HTTP 头获取用户 IP。
+      listen: :5888  # 监听地址。
+      cert: "/usr/local/etc/mosdns/ssl/server.crt" # 留空 cert 和 key 后会禁用 TLS。
+      key: "/usr/local/etc/mosdns/ssl/server.key" 
+      idle_timeout: 30 # 默认 30。

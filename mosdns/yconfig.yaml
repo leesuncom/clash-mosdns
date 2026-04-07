@@ -1,0 +1,253 @@
+log:
+  level: info
+  file: /var/log/mosdns.log
+api:
+  http: 0.0.0.0:9091
+include: []
+plugins:
+  - tag: geosite_cn
+    type: domain_set
+    args:
+      files:
+        - /usr/local/etc/mosdns/rule/geosite_cn.txt
+  - tag: geoip_cn
+    type: ip_set
+    args:
+      files:
+        - /usr/local/etc/mosdns/rule/geoip_cn.txt
+  - tag: geosite_apple
+    type: domain_set
+    args:
+      files:
+        - /usr/local/etc/mosdns/rule/geosite_apple.txt
+  - tag: geosite_no_cn
+    type: domain_set
+    args:
+      files:
+        - /usr/local/etc/mosdns/rule/geosite_geolocation-!cn.txt
+  - tag: whitelist
+    type: domain_set
+    args:
+      files:
+        - /usr/local/etc/mosdns/rule/whitelist.txt
+  - tag: blocklist
+    type: domain_set
+    args:
+      files:
+        - /usr/local/etc/mosdns/rule/blocklist.txt
+  - tag: greylist
+    type: domain_set
+    args:
+      files:
+        - /usr/local/etc/mosdns/rule/greylist.txt
+  - tag: ddnslist
+    type: domain_set
+    args:
+      files:
+        - /usr/local/etc/mosdns/rule/ddnslist.txt
+  - tag: hosts
+    type: hosts
+    args:
+      files:
+        - /usr/local/etc/mosdns/rule/hosts.txt
+  - tag: redirect
+    type: redirect
+    args:
+      files:
+        - /usr/local/etc/mosdns/rule/redirect.txt
+  # 👇 已注释：广告域名列表（禁用广告加载）
+  # - tag: adlist
+  #   type: domain_set
+  #   args:
+  #     files:
+  #       - /usr/local/etc/mosdns/rule/geosite_category-ads-all.txt
+  #       - /usr/local/etc/mosdns/rule/anti-ad-domains.txt
+  - tag: local_ptr
+    type: domain_set
+    args:
+      files:
+        - /usr/local/etc/mosdns/rule/local-ptr.txt
+  - tag: stream_media
+    type: domain_set
+    args:
+      files:
+        - /usr/local/etc/mosdns/rule/geosite_disney.txt
+        - /usr/local/etc/mosdns/rule/geosite_netflix.txt
+        - /usr/local/etc/mosdns/rule/geosite_hulu.txt
+        - /usr/local/etc/mosdns/rule/streaming.txt
+  - tag: lazy_cache
+    type: cache
+    args:
+      size: 8000
+      lazy_cache_ttl: 86400
+      dump_file: /usr/local/etc/mosdns/cache.dump
+      dump_interval: 3600
+  - tag: forward_local
+    type: forward
+    args:
+      concurrent: 1
+      upstreams:
+        - addr: https://doh.pub/dns-query
+          bootstrap: 119.29.29.29
+          enable_pipeline: true
+          insecure_skip_verify: false
+          idle_timeout: 30
+  - tag: forward_remote
+    type: forward
+    args:
+      concurrent: 1
+      upstreams:
+        - addr: https://127.0.0.1:7058/dns-query
+        #- addr: 127.0.0.1:5353
+  - tag: forward_remote_upstream
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      - exec: $forward_remote
+  - tag: forward_stream_media
+    type: forward
+    args:
+      concurrent: 2
+      upstreams:
+        - addr: tls://8.8.8.8
+          bootstrap: 119.29.29.29
+          enable_pipeline: true
+          insecure_skip_verify: false
+          idle_timeout: 30
+  - tag: forward_stream_media_upstream
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      - exec: $forward_stream_media
+  - tag: modify_ttl
+    type: sequence
+    args:
+      - exec: ttl 300-86400
+  - tag: modify_ddns_ttl
+    type: sequence
+    args:
+      - exec: ttl 5-5
+  - tag: has_resp_sequence
+    type: sequence
+    args:
+      - matches: qname $ddnslist
+        exec: $modify_ddns_ttl
+      - matches: '!qname $ddnslist'
+        exec: $modify_ttl
+      - matches: has_resp
+        exec: accept
+  - tag: query_is_non_local_ip
+    type: sequence
+    args:
+      - exec: $forward_local
+      - matches: '!resp_ip $geoip_cn'
+        exec: drop_resp
+      - matches: resp_ip $geoip_cn
+        exec: accept
+  - tag: leak_proof_fallback
+    type: fallback
+    args:
+      primary: forward_remote_upstream
+      secondary: forward_remote_upstream
+      threshold: 500
+      always_standby: true
+  - tag: apple_domain_fallback
+    type: fallback
+    args:
+      primary: query_is_non_local_ip
+      secondary: forward_remote_upstream
+      threshold: 100
+      always_standby: true
+  - tag: query_is_apple_domain
+    type: sequence
+    args:
+      - matches: '!qname $geosite_apple'
+        exec: return
+      - exec: $apple_domain_fallback
+  - tag: query_is_ddns_domain
+    type: sequence
+    args:
+      - matches: qname $ddnslist
+        exec: $forward_local
+  - tag: query_is_local_domain
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      - matches: qname $geosite_cn
+        exec: $forward_local
+  - tag: query_is_no_local_domain
+    type: sequence
+    args:
+      - matches: qname $geosite_no_cn
+        exec: $forward_remote_upstream
+  - tag: query_is_whitelist_domain
+    type: sequence
+    args:
+      - exec: prefer_ipv4
+      - matches: qname $whitelist
+        exec: $forward_local
+  - tag: query_is_greylist_domain
+    type: sequence
+    args:
+      - matches: qname $greylist
+        exec: $forward_remote_upstream
+  - tag: query_is_reject_domain
+    type: sequence
+    args:
+      - matches: qname $blocklist
+        exec: reject 3
+      # 👇 已注释：广告域名拦截规则（禁用广告拦截）
+      # - matches: qname $adlist
+      #   exec: reject 3
+      - matches:
+          - qtype 12
+          - qname $local_ptr
+        exec: reject 3
+      - matches: qtype 65
+        exec: reject 3
+  - tag: query_is_stream_media_domain
+    type: sequence
+    args:
+      - matches: qname $stream_media
+        exec: $forward_stream_media_upstream
+  - tag: main_sequence
+    type: sequence
+    args:
+      - exec: $hosts
+      - exec: jump has_resp_sequence
+      # 👇 已注释：广告域名排除缓存（恢复广告域名正常缓存）
+      - matches:
+          - '!qname $ddnslist'
+          - '!qname $blocklist'
+          # - '!qname $adlist'
+          - '!qname $local_ptr'
+        exec: $lazy_cache
+      - exec: jump has_resp_sequence
+      - exec: $redirect
+      - exec: jump has_resp_sequence
+      - exec: $query_is_apple_domain
+      - exec: jump has_resp_sequence
+      - exec: $query_is_ddns_domain
+      - exec: jump has_resp_sequence
+      - exec: $query_is_whitelist_domain
+      - exec: jump has_resp_sequence
+      - exec: $query_is_reject_domain
+      - exec: jump has_resp_sequence
+      - exec: $query_is_greylist_domain
+      - exec: jump has_resp_sequence
+      - exec: $query_is_local_domain
+      - exec: jump has_resp_sequence
+      - exec: $query_is_no_local_domain
+      - exec: jump has_resp_sequence
+      - exec: $leak_proof_fallback
+      - exec: jump has_resp_sequence
+  - tag: udp_server
+    type: udp_server
+    args:
+      entry: main_sequence
+      listen: 0.0.0.0:5335
+  - tag: tcp_server
+    type: tcp_server
+    args:
+      entry: main_sequence
+      listen: 0.0.0.0:5335
