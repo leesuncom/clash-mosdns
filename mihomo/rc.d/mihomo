@@ -1,0 +1,100 @@
+#!/bin/sh
+#
+# PROVIDE: mihomo
+# REQUIRE: NETWORKING SERVERS
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+# 核心配置
+name="mihomo"
+rcvar="${name}_enable"
+pidfile="/var/run/${name}.pid"
+log_file="/var/log/${name}.log"
+mihomo_bin="/usr/local/bin/mihomo"
+mihomo_conf_dir="/usr/local/etc/mihomo"
+tun_device="tun_3000"
+
+# 开机默认不自启（关键）
+: ${mihomo_enable:="NO"}
+
+# 命令绑定
+start_cmd="my_${name}_start"
+stop_cmd="my_${name}_stop"
+restart_cmd="my_${name}_restart"
+status_cmd="my_${name}_status"
+
+# 清理残留资源
+clean_residual() {
+    echo "🔍 清理 mihomo 残留资源..."
+    [ -f "${pidfile}" ] && rm -f "${pidfile}"
+    pgrep -x "${name}" >/dev/null && pkill -9 "${name}" >/dev/null 2>&1
+    if [ -n "${tun_device}" ] && ifconfig | grep -q "${tun_device}"; then
+        ifconfig "${tun_device}" destroy >/dev/null 2>&1
+        echo "✅ 已清理 TUN 设备: ${tun_device}"
+    fi
+    sleep 1
+}
+
+# 启动
+my_mihomo_start() {
+    [ ! -x "${mihomo_bin}" ] && echo "❌ 缺失可执行文件" && return 1
+    [ ! -d "${mihomo_conf_dir}" ] && echo "❌ 缺失配置目录" && return 1
+
+    clean_residual
+    echo "🚀 启动 mihomo..."
+    touch "${log_file}"
+    chmod 644 "${log_file}"
+
+    cd "${mihomo_conf_dir}" || return 1
+    ${mihomo_bin} -d "${mihomo_conf_dir}" > "${log_file}" 2>&1 &
+    echo $! > "${pidfile}"
+
+    sleep 3
+    if [ -f "${pidfile}" ] && kill -0 $(cat "${pidfile}") 2>/dev/null; then
+        echo "✅ mihomo 启动成功 PID: $(cat ${pidfile})"
+        sockstat -4 -l | grep -q "7853" && echo "✅ DNS 7853 正常监听"
+        return 0
+    else
+        echo "❌ 启动失败"
+        rm -f "${pidfile}"
+        return 1
+    fi
+}
+
+# 停止
+my_mihomo_stop() {
+    echo "🛑 停止 mihomo..."
+    [ -f "${pidfile}" ] && kill -9 $(cat "${pidfile}") 2>/dev/null
+    pkill -9 "${name}" >/dev/null 2>&1
+    clean_residual
+    echo "✅ mihomo 已停止"
+}
+
+# 重启
+my_mihomo_restart() {
+    my_mihomo_stop
+    sleep 1
+    my_mihomo_start
+}
+
+# 状态
+my_mihomo_status() {
+    if [ -f "${pidfile}" ] && kill -0 $(cat "${pidfile}") 2>/dev/null; then
+        echo "✅ mihomo 运行中 PID: $(cat ${pidfile})"
+        sockstat -4 -l | grep -q "7853" && echo "✅ DNS 7853 正常"
+        return 0
+    else
+        echo "❌ mihomo 未运行"
+        return 1
+    fi
+}
+
+# ===================== 关键：强制允许手动执行，不影响开机自启 =====================
+load_rc_config "${name}"
+if [ -n "$1" ]; then
+    # 手动执行时临时允许启动，不修改系统配置
+    mihomo_enable="YES"
+fi
+
+run_rc_command "$1"
